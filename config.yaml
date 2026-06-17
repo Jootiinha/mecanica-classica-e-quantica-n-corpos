@@ -1,0 +1,38 @@
+# Configurações globais da simulação
+g: 1500.0
+total_passos: 1000
+dt: 0.016
+
+# Definição dos Cenários
+cenarios:
+  - nome: "c1_proximas_movimento"
+    m1: 300.0
+    m2: 300.0
+    r1_init: [400.0, 250.0]
+    r2_init: [400.0, 270.0] # Próximas
+    v1_init: [-30.0, 0.0]   # Com velocidade
+    v2_init: [30.0, 0.0]
+
+  - nome: "c1_distantes_movimento"
+    m1: 300.0
+    m2: 300.0
+    r1_init: [400.0, 250.0]
+    r2_init: [400.0, 450.0] # Distantes
+    v1_init: [-15.0, 10.0]
+    v2_init: [15.0, -10.0]
+
+  - nome: "c2_proximas_movimento"
+    m1: 333000.0
+    m2: 1.0
+    r1_init: [400.0, 250.0]
+    r2_init: [400.0, 260.0] # Próximas
+    v1_init: [0.0, 0.0]
+    v2_init: [220.0, 0.0]   # Velocidade de órbita para a partícula leve
+
+  - nome: "c2_distantes_movimento"
+    m1: 333000.0
+    m2: 1.0
+    r1_init: [400.0, 250.0]
+    r2_init: [400.0, 400.0] # Distantes
+    v1_init: [0.0, 0.0]
+    v2_init: [55.0, 0.0]
