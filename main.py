@@ -1,8 +1,8 @@
 import os
 import yaml
-from simulador_gravitacao import simular_gravitacao__2d
+from src.simulador_gravitacao import simular_gravitacao__2d
 import numpy as np
-from create_animations.create_animations import renderizar_gif_cenario
+
 def executar_simulacoes():
     # 1. Carrega as configurações do YAML
     with open("config.yaml", "r", encoding="utf-8") as file:
