@@ -7,30 +7,30 @@ Este projeto implementa um simulador numérico bidimensional para a interação 
 ## 🛠️ Pré-Requisitos e Instalação
 
 1. Clone o repositório para a sua máquina local.
-2. Certifique-se de ter o Python 3.10+ instalado.
+2. Certifique-se de ter o Python 3.13+ e o Poetry instalados.
 3. Abra o terminal na raiz do projeto e execute os comandos abaixo:
 
-### 1. Criar o Ambiente Virtual (venv)
+### 1. Instalar as dependências
 ```bash
-python -m venv venv
+poetry install
 ```
 
-# Ativação da venv (Windows)
+### 2. Executar os calculos
 ```bash
-.\venv\Scripts\activate
+poetry run python main.py
 ```
-# Instalação dos pacotes obrigatórios
+
+### 3. Gerar animações
 ```bash
-pip install -r requirements.txt
+poetry run python src/create_animations.py
 ```
-# Executar os calculos
+
+### Alternativa com Makefile
 ```bash
-python main.py
+make install
+make run
 ```
-# Gerar animações
-```
-python src/create_animations.py
-```
+
 **Para alterar os cenários modifique diretamente o arquivo config.yaml**
 
 ## 🚀 Funcionalidades
@@ -56,8 +56,8 @@ MECANICA-CLASSICA-E-QUANTICA-N-CORPOS/
 │
 ├── config.yaml                   # Definição e parâmetros dos cenários
 ├── main.py                       # Orquestrador (calcula a física em lote)
-├── requirements.txt              # Dependências do projeto (pip freeze)
+├── pyproject.toml                # Dependências e configuração do Poetry
 │
 ├── outputs/                      # Arquivos gerados pela execução
 │
-└── venv/                         # Ambiente virtual Python
+└── .venv/                        # Ambiente virtual gerado pelo Poetry
