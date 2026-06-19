@@ -1,3 +1,12 @@
+import numpy as np
+import os
+from plot import set_axes_equal_3d
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+from matplotlib import animation
+
+from utils import _slugify_nome_arquivo
+
 from calculos import (
         posicao_centro_massa
     ,   velocidade_centro_massa
@@ -7,45 +16,26 @@ from calculos import (
     ,   momento_liner_total
     ,   momento_angular_total
 )
-from plot import set_axes_equal_3d
-import numpy as np
-from scipy.integrate import solve_ivp
-
-import matplotlib.pyplot as plt
-from matplotlib import animation
-
-
-def _validar_vetor_3d(nome, valor, permitir_vazio=False):
-    vetor = np.array(valor, dtype=float)
-
-    if permitir_vazio and vetor.size == 0:
-        return vetor
-
-    if vetor.shape != (3,):
-        raise ValueError(f"{nome} deve ter exatamente 3 coordenadas, recebido shape {vetor.shape}")
-
-    return vetor
-
 
 def simular_dois_corpos_3d(caso):
     # Salvar sempre o vídeo e o gráfico
-    
+
     if caso['massa_variavel'] == True:
         if caso['tau1'] is None or caso['tau2'] is None:
             raise ValueError("Para massa variavel, tau1 e tau2 precisam ser definidos")
     
     # Posição corpo 1
-    r1_0 = _validar_vetor_3d("r1", caso['r1'])
-    r2_0 = _validar_vetor_3d("r2", caso['r2'])
+    r1_0 = np.array(caso['r1'], dtype=float)
+    r2_0 = np.array(caso['r2'], dtype=float)
     
     # Posição corpo 2
-    v1_0 = _validar_vetor_3d("v1", caso['v1'])
-    v2_0 = _validar_vetor_3d("v2", caso['v2'])
+    v1_0 = np.array(caso['v1'], dtype=float)
+    v2_0 = np.array(caso['v2'], dtype=float)
 
     V_CM = np.array([0.0, 0.0, 0.0], dtype=float)
 
     if caso['V_CM'] is not None:
-        V_CM = _validar_vetor_3d("V_CM", caso['V_CM'], permitir_vazio=True)
+        V_CM = np.array(caso['V_CM'], dtype=float)
         if V_CM.size == 0:
             V_CM = np.array([0.0, 0.0, 0.0], dtype=float)
     
@@ -58,23 +48,23 @@ def simular_dois_corpos_3d(caso):
     print(12*'=')
     print(
         f"""
-            G => {caso['G']} \n
-            M1 INICIAL  \t\t\t {caso['m1']} \n
-            M2 INICIAL \t\t\t {caso['m2']} \n
-            m1/m2 INICIAL \t\t\t {caso['m1'] / caso['m2']} \n
-            eps \t\t\t {caso['eps']} \n
-            massa variavel \t\t\t {caso['massa_variavel']} \n
-            tau1 \t\t\t {caso['tau1']} \n
-            tau2 \t\t\t {caso['tau2']} \n
-            m1(t_final)/m1(0) \t\t\t {np.exp(-caso['t_final'] / caso['tau1'])} \n
-            m2(t_final)/m2(0) \t\t\t {np.exp(-caso['t_final'] / caso['tau2'])} \n
-            V_CM \t\t\t {caso['V_CM']} \n
-            r1(0) \t\t\t { r1_0} \n
-            r2(0) \t\t\t { r2_0} \n
-            v1(0) \t\t\t { v1_0 } \n
-            v2(0) \t\t\t { v2_0} \n
-            CM inicial \t\t\t { r_com_0 } \n
-            V_CM inicial \t\t\t { v_com_0 } \n
+            G => {caso['G']}
+            M1 INICIAL \t {caso['m1']}
+            M2 INICIAL \t {caso['m2']}
+            m1/m2 INICIAL \t {caso['m1'] / caso['m2']}
+            eps \t {caso['eps']}
+            massa variavel \t {caso['massa_variavel']}
+            tau1 \t {caso['tau1']}
+            tau2 \t {caso['tau2']}
+            m1(t_final)/m1(0) \t {np.exp(-caso['t_final'] / caso['tau1'])}
+            m2(t_final)/m2(0) \t {np.exp(-caso['t_final'] / caso['tau2'])}
+            V_CM \t {caso['V_CM']}
+            r1(0) \t { r1_0}
+            r2(0) \t { r2_0}
+            v1(0) \t { v1_0 }
+            v2(0) \t { v2_0}
+            CM inicial \t { r_com_0 }
+            V_CM inicial \t { v_com_0 }
         """
     )
     print(12*'=')
@@ -100,6 +90,8 @@ def simular_dois_corpos_3d(caso):
         print("A integração falhou")
         print(solver_object.message)
         raise ValueError("A integração falhou")
+
+    print("Integração concluída.")
     
     solucao = solver_object.y.T
 
@@ -150,20 +142,50 @@ def simular_dois_corpos_3d(caso):
 
     set_axes_equal_3d(ax_static, r1_sol, r2_sol, r_com_sol, fator_visual_z=0.75)
 
-    plt.show()
-    
+    if caso['mostrar_grafico']:
+        print("Exibindo gráfico estático...")
+        plt.show()
+    else:
+        plt.close(fig_static)
+
+    if not caso['salvar_animacao']:
+        print("Exportação de animação desativada para este cenário.")
+        return {
+            "time": time_span,
+            "r1": r1_sol,
+            "r2": r2_sol,
+            "v1": v1_sol,
+            "v2": v2_sol,
+            "r_com": r_com_sol,
+            "m1_t": m1_series,
+            "m2_t": m2_series,
+            "E": E,
+            "P": P,
+            "L": L,
+            "animacao": None,
+            "video": None
+        }
+
+    writer_ffmpeg_disponivel = animation.writers.is_available("ffmpeg")
+    skip_animacao = caso["skip"]
+    dpi_animacao = caso["dpi"]
+
+    if not writer_ffmpeg_disponivel:
+        skip_animacao = max(skip_animacao, caso.get("skip_pillow", 12))
+        dpi_animacao = min(dpi_animacao, caso.get("dpi_pillow", 100))
 
     # Animacao 3d
-    r1_anim = r1_sol[::caso['skip']]
-    r2_anim = r2_sol[::caso['skip']]
-    r_com_anim = r_com_sol[::caso['skip']]
-    time_anim = time_span[::caso['skip']]
-
-    m1_anim = m1_series[::caso['skip']]
-
-    m2_anim = m2_series[::caso['skip']]
+    print(
+        f"Preparando animação com {('ffmpeg' if writer_ffmpeg_disponivel else 'pillow')} "
+        f"(skip={skip_animacao}, dpi={dpi_animacao})..."
+    )
+    r1_anim = r1_sol[::skip_animacao]
+    r2_anim = r2_sol[::skip_animacao]
+    r_com_anim = r_com_sol[::skip_animacao]
+    time_anim = time_span[::skip_animacao]
 
     frames = len(r1_anim)
+    print(f"Total de frames da animação: {frames}")
 
     fig = plt.figure(figsize=(9, 8))
     ax = fig.add_subplot(111, projection="3d")
@@ -255,18 +277,33 @@ def simular_dois_corpos_3d(caso):
         blit=False
     )
 
+    pasta_saida = os.path.join("outputs", "adhoc")
+    os.makedirs(pasta_saida, exist_ok=True)
+    base_nome_arquivo = _slugify_nome_arquivo(caso["nome"])
     nome_video = None
 
-    if animation.writers.is_available("ffmpeg"):
-        nome_video = "alec_simulacao.mp4"
+    if writer_ffmpeg_disponivel:
+        print("Salvando animação com ffmpeg...")
+        nome_video = os.path.join(pasta_saida, f"{base_nome_arquivo}.mp4")
         Writer = animation.writers["ffmpeg"]
         writer = Writer(fps=caso['fps'], metadata=dict(artist="MCQ"), bitrate=4000)
-        anim.save(nome_video, writer=writer, dpi=caso['dpi'])
+        anim.save(
+            nome_video,
+            writer=writer,
+            dpi=dpi_animacao,
+            progress_callback=lambda i, n: print(f"Renderizando frame {i + 1}/{n}") if (i + 1) % 100 == 0 or i + 1 == n else None,
+        )
         print("\nVídeo salvo como:", nome_video)
     elif animation.writers.is_available("pillow"):
-        nome_video = "alec_simulacao.gif"
+        print("FFmpeg indisponível. Salvando animação com Pillow...")
+        nome_video = os.path.join(pasta_saida, f"{base_nome_arquivo}.gif")
         writer = animation.PillowWriter(fps=caso['fps'], metadata=dict(artist="MCQ"))
-        anim.save(nome_video, writer=writer, dpi=caso['dpi'])
+        anim.save(
+            nome_video,
+            writer=writer,
+            dpi=dpi_animacao,
+            progress_callback=lambda i, n: print(f"Renderizando frame {i + 1}/{n}") if (i + 1) % 25 == 0 or i + 1 == n else None,
+        )
         print("\nFFmpeg indisponível. Animação salva como:", nome_video)
     else:
         print("\nNenhum writer de animação disponível. A simulação foi concluída sem exportar vídeo.")
