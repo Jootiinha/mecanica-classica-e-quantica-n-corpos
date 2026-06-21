@@ -2,38 +2,89 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from src.calculos import (
-        equacao_de_dois_corpos
+        equacao_hamilton_dois_corpos
+    ,   equacao_lagrange_dois_corpos
+    ,   equacao_newton_dois_corpos
     ,   massa_no_tempo
 )
 
-def simular_dois_corpos_3d(caso):
+FORMALISMS = ("newtonian", "lagrangian", "hamiltonian")
 
-    if caso['physics']['massa_variavel'] == True:
-        if caso['physics']['tau1'] is None or caso['physics']['tau2'] is None:
-            raise ValueError("Para massa variavel, tau1 e tau2 precisam ser definidos")
-    
-    # Posição corpo 1
-    initial_position_body_1 = np.array(caso['physics']['initial_position_body_1'], dtype=float)
-    initial_position_body_2 = np.array(caso['physics']['initial_position_body_2'], dtype=float)
-    
-    # Posição corpo 2
-    initial_velocity_body_1 = np.array(caso['physics']['initial_velocity_body_1'], dtype=float)
-    initial_velocity_body_2 = np.array(caso['physics']['initial_velocity_body_2'], dtype=float)
 
-    center_mass_velocity = np.array([0.0, 0.0, 0.0], dtype=float)
-    
-    # Soma de vetores
+def _solver_function(formalism):
+    solver_map = {
+        "newtonian": equacao_newton_dois_corpos,
+        "lagrangian": equacao_lagrange_dois_corpos,
+        "hamiltonian": equacao_hamilton_dois_corpos,
+    }
+    try:
+        return solver_map[formalism]
+    except KeyError as exc:
+        raise ValueError(f"Formalismo desconhecido: {formalism}") from exc
+
+
+def _build_initial_state(caso, formalism):
+    physics = caso["physics"]
+
+    initial_position_body_1 = np.array(physics["initial_position_body_1"], dtype=float)
+    initial_position_body_2 = np.array(physics["initial_position_body_2"], dtype=float)
+    initial_velocity_body_1 = np.array(physics["initial_velocity_body_1"], dtype=float)
+    initial_velocity_body_2 = np.array(physics["initial_velocity_body_2"], dtype=float)
+    center_mass_velocity = np.array(physics["center_mass_velocity"], dtype=float)
+
     initial_velocity_body_1 = initial_velocity_body_1 + center_mass_velocity
     initial_velocity_body_2 = initial_velocity_body_2 + center_mass_velocity
 
-    init_parameters = np.concatenate(
-        (initial_position_body_1, initial_position_body_2, initial_velocity_body_1, initial_velocity_body_2)
+    if formalism == "hamiltonian":
+        p1_0 = physics["m1"] * initial_velocity_body_1
+        p2_0 = physics["m2"] * initial_velocity_body_2
+        return np.concatenate(
+            (initial_position_body_1, initial_position_body_2, p1_0, p2_0)
+        )
+
+    return np.concatenate(
+        (
+            initial_position_body_1,
+            initial_position_body_2,
+            initial_velocity_body_1,
+            initial_velocity_body_2,
+        )
     )
+
+
+def _extract_solution_arrays(solucao, m1_series, m2_series, formalism):
+    r1_sol = solucao[:, 0:3]
+    r2_sol = solucao[:, 3:6]
+
+    if formalism == "hamiltonian":
+        p1_sol = solucao[:, 6:9]
+        p2_sol = solucao[:, 9:12]
+        v1_sol = p1_sol / m1_series[:, None]
+        v2_sol = p2_sol / m2_series[:, None]
+    else:
+        v1_sol = solucao[:, 6:9]
+        v2_sol = solucao[:, 9:12]
+        p1_sol = m1_series[:, None] * v1_sol
+        p2_sol = m2_series[:, None] * v2_sol
+
+    return r1_sol, r2_sol, v1_sol, v2_sol, p1_sol, p2_sol
+
+
+def simular_dois_corpos_3d(caso, formalism="newtonian"):
+
+    if formalism not in FORMALISMS:
+        raise ValueError(f"Formalismo inválido: {formalism}")
+
+    if caso['physics']['massa_variavel'] is True:
+        if caso['physics']['tau1'] is None or caso['physics']['tau2'] is None:
+            raise ValueError("Para massa variavel, tau1 e tau2 precisam ser definidos")
+
+    init_parameters = _build_initial_state(caso, formalism)
 
     time_span = np.linspace(0.0, caso['physics']['t_final'], caso['physics']['n_pontos'])
 
     solver_object = solve_ivp(
-        equacao_de_dois_corpos,
+        _solver_function(formalism),
         [0.0, caso['physics']['t_final']],
         init_parameters,
         t_eval=time_span,
@@ -51,13 +102,19 @@ def simular_dois_corpos_3d(caso):
         atol=1e-10
     )
 
-    solucao = solver_object.y.T
+    if not solver_object.success:
+        raise RuntimeError(f"Falha na integração ({formalism}): {solver_object.message}")
 
-    r1_sol = solucao[:, 0:3]
-    r2_sol = solucao[:, 3:6]
+    solucao = solver_object.y.T
 
     m1_series = massa_no_tempo(time_span, caso['physics']['m1'], caso['physics']['tau1'], caso['physics']['massa_variavel'])
     m2_series = massa_no_tempo(time_span, caso['physics']['m2'], caso['physics']['tau2'], caso['physics']['massa_variavel'])
+    r1_sol, r2_sol, v1_sol, v2_sol, p1_sol, p2_sol = _extract_solution_arrays(
+        solucao,
+        m1_series,
+        m2_series,
+        formalism,
+    )
 
     r_com_sol = (
         m1_series[:, None] * r1_sol + m2_series[:, None] * r2_sol
@@ -67,7 +124,12 @@ def simular_dois_corpos_3d(caso):
         "time": time_span,
         "r1": r1_sol,
         "r2": r2_sol,
+        "v1": v1_sol,
+        "v2": v2_sol,
+        "p1": p1_sol,
+        "p2": p2_sol,
         "r_com": r_com_sol,
         "m1_t": m1_series,
         "m2_t": m2_series,
+        "formalism": np.array(formalism),
     }

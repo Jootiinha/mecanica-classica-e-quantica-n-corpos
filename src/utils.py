@@ -21,3 +21,8 @@ def _slugify_nome_arquivo(nome):
 def build_results_file_path(scenario_file: str):
     scenario_stem = Path(scenario_file).stem
     return Path("outputs") / "results" / f"{scenario_stem}.npz"
+
+
+def build_report_file_path(scenario_file: str):
+    scenario_stem = Path(scenario_file).stem
+    return Path("outputs") / "reports" / f"{scenario_stem}.md"

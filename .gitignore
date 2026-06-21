@@ -13,3 +13,6 @@ __pycache__/
 
 ### Local outputs ###
 outputs/
+
+docs/
+.DS_Store

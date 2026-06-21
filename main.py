@@ -3,8 +3,8 @@ import os
 import numpy as np
 
 from src.performance_metrics import ExecutionProfiler, append_metrics_csv
-from src.simulacao import simular_dois_corpos_3d
-from src.utils import build_results_file_path, load_scenarios
+from src.trabalho_analysis import build_trabalho_report, run_all_formalisms
+from src.utils import build_report_file_path, build_results_file_path, load_scenarios
 
 PATH_SCENARIOS = './scenarios/'
 
@@ -15,12 +15,24 @@ def run_simulation():
         raise ValueError("A variavel de ambiente SCENARIO precisa ser informada.")
 
     scenario_config = load_scenarios(PATH_SCENARIOS + scenario_file)
-    simulation_result = simular_dois_corpos_3d(scenario_config)
+    simulation_results = run_all_formalisms(scenario_config)
+    render_formalism = "newtonian"
+    simulation_result = simulation_results[render_formalism]
     results_path = build_results_file_path(scenario_file)
+    report_path = build_report_file_path(scenario_file)
     results_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(results_path, **simulation_result)
+
+    payload = dict(simulation_result)
+    payload["render_formalism"] = np.array(render_formalism)
+    for formalism, result in simulation_results.items():
+        for key, value in result.items():
+            payload[f"{formalism}_{key}"] = value
+
+    np.savez_compressed(results_path, **payload)
+    build_trabalho_report(scenario_config, simulation_results, report_path)
 
     print(f"Resultados fisicos salvos em: {results_path}")
+    print(f"Relatorio do trabalho salvo em: {report_path}")
     return results_path
 
 
