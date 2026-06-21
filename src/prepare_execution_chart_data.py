@@ -1,10 +1,13 @@
 import csv
+import os
 from datetime import datetime
 from pathlib import Path
 
+from src.utils import build_chart_data_file_path, build_metrics_output_dir
 
-INPUT_CSV = Path("outputs/performance_metrics.csv")
-OUTPUT_TSV = Path("outputs/charts/execution_metrics_plot_data.tsv")
+
+def _resolve_formalism() -> str:
+    return (os.environ.get("FORMALISM") or "newtonian").strip().lower()
 
 
 def build_execution_label(index: int, row: dict[str, str]) -> str:
@@ -20,17 +23,21 @@ def parse_timestamp(row: dict[str, str]) -> datetime:
 
 
 def main():
-    if not INPUT_CSV.exists():
-        raise FileNotFoundError(f"Arquivo nao encontrado: {INPUT_CSV}")
+    formalism = _resolve_formalism()
+    input_csv = build_metrics_output_dir(formalism) / "performance_metrics.csv"
+    output_tsv = build_chart_data_file_path(formalism)
 
-    OUTPUT_TSV.parent.mkdir(parents=True, exist_ok=True)
+    if not input_csv.exists():
+        raise FileNotFoundError(f"Arquivo nao encontrado: {input_csv}")
 
-    with INPUT_CSV.open("r", newline="", encoding="utf-8") as csv_file:
+    output_tsv.parent.mkdir(parents=True, exist_ok=True)
+
+    with input_csv.open("r", newline="", encoding="utf-8") as csv_file:
         rows = list(csv.DictReader(csv_file))
 
     rows.sort(key=parse_timestamp)
 
-    with OUTPUT_TSV.open("w", newline="", encoding="utf-8") as tsv_file:
+    with output_tsv.open("w", newline="", encoding="utf-8") as tsv_file:
         writer = csv.writer(tsv_file, delimiter="\t")
         writer.writerow(
             [
@@ -38,7 +45,8 @@ def main():
                 "execution_label",
                 "wall_time_seconds",
                 "cpu_time_seconds",
-                "avg_cpu_percent",
+                "avg_process_cpu_percent",
+                "avg_machine_cpu_percent",
                 "peak_memory_mb",
             ]
         )
@@ -50,7 +58,8 @@ def main():
                     build_execution_label(index, row),
                     row["wall_time_seconds"],
                     row["cpu_time_seconds"],
-                    row["avg_cpu_percent"],
+                    row.get("avg_process_cpu_percent", row.get("avg_cpu_percent", "")),
+                    row.get("avg_machine_cpu_percent", ""),
                     row["peak_memory_mb"],
                 ]
             )

@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-from src.utils import _slugify_nome_arquivo
+from src.utils import _slugify_nome_arquivo, build_render_output_dir
 
 
 def set_axes_equal_3d(ax, r1_sol, r2_sol, r_com_sol=None, fator_visual_z=0.75):
@@ -51,14 +51,14 @@ def set_axes_equal_3d(ax, r1_sol, r2_sol, r_com_sol=None, fator_visual_z=0.75):
     ax.set_zlim(z_mid - lim * fator_visual_z, z_mid + lim * fator_visual_z)
 
 
-def render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol):
+def render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism="newtonian"):
     _render_static_plot(caso, r1_sol, r2_sol, r_com_sol)
 
     if not caso["chart"]["salvar_animacao"]:
         print("Exportação de animação desativada para este cenário.")
         return {"animacao": None, "video": None}
 
-    return _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol)
+    return _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism)
 
 
 def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol):
@@ -97,7 +97,7 @@ def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol):
     plt.close(fig_static)
 
 
-def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol):
+def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism):
     writer_ffmpeg_disponivel = animation.writers.is_available("ffmpeg")
     skip_animacao = caso["chart"]["skip"]
     dpi_animacao = caso["chart"]["dpi"]
@@ -189,23 +189,23 @@ def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol):
         blit=False,
     )
 
-    nome_video = _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig)
+    nome_video = _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig, formalism)
     plt.close(fig)
     return {"animacao": anim, "video": nome_video}
 
 
-def _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig):
-    pasta_saida = os.path.join("outputs", "adhoc")
-    os.makedirs(pasta_saida, exist_ok=True)
+def _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig, formalism):
+    pasta_saida = build_render_output_dir(formalism)
+    pasta_saida.mkdir(parents=True, exist_ok=True)
     base_nome_arquivo = _slugify_nome_arquivo(caso["name"])
 
     if writer_ffmpeg_disponivel:
         print("Salvando animação com ffmpeg...")
-        nome_video = os.path.join(pasta_saida, f"{base_nome_arquivo}.mp4")
+        nome_video = pasta_saida / f"{base_nome_arquivo}.mp4"
         writer_cls = animation.writers["ffmpeg"]
         writer = writer_cls(fps=caso["chart"]["fps"], metadata=dict(artist="MCQ"), bitrate=4000)
         anim.save(
-            nome_video,
+            str(nome_video),
             writer=writer,
             dpi=dpi_animacao,
             progress_callback=lambda i, n: print(f"Renderizando frame {i + 1}/{n}")
@@ -213,14 +213,14 @@ def _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig):
             else None,
         )
         print("\nVídeo salvo como:", nome_video)
-        return nome_video
+        return str(nome_video)
 
     if animation.writers.is_available("pillow"):
         print("FFmpeg indisponível. Salvando animação com Pillow...")
-        nome_video = os.path.join(pasta_saida, f"{base_nome_arquivo}.gif")
+        nome_video = pasta_saida / f"{base_nome_arquivo}.gif"
         writer = animation.PillowWriter(fps=caso["chart"]["fps"], metadata=dict(artist="MCQ"))
         anim.save(
-            nome_video,
+            str(nome_video),
             writer=writer,
             dpi=dpi_animacao,
             progress_callback=lambda i, n: print(f"Renderizando frame {i + 1}/{n}")
@@ -228,7 +228,7 @@ def _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig):
             else None,
         )
         print("\nFFmpeg indisponível. Animação salva como:", nome_video)
-        return nome_video
+        return str(nome_video)
 
     print("\nNenhum writer de animação disponível. A simulação foi concluída sem exportar vídeo.")
     plt.close(fig)

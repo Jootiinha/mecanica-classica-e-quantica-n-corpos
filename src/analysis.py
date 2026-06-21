@@ -98,6 +98,37 @@ def compare_formalisms(resultados: dict[str, dict]) -> dict[str, float]:
     return comparacao
 
 
+def build_formalism_report(caso, formalism: str, resultado: dict, report_path: Path):
+    resumo = build_conservation_summary(caso, resultado)
+
+    lines = [
+        f"# Relatorio do Trabalho - {caso['name']} [{formalism}]",
+        "",
+        "## Formalismo",
+        "",
+        f"- `{formalism}`",
+        "",
+        "## Leis de conservacao",
+        "",
+        f"- `energia_drift_max`: `{resumo.energia_drift_max:.6e}`",
+        f"- `momento_linear_drift_max`: `{resumo.momento_linear_drift_max:.6e}`",
+        f"- `momento_angular_drift_max`: `{resumo.momento_angular_drift_max:.6e}`",
+    ]
+
+    if caso["physics"]["massa_variavel"]:
+        lines.extend(
+            [
+                "",
+                "## Observacao sobre massa variavel",
+                "",
+                "Como as massas dependem explicitamente do tempo, os valores acima servem como diagnostico numerico do sistema modelado, e nao como garantia de conservacao estrita das grandezas classicas.",
+            ]
+        )
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def build_trabalho_report(caso, resultados: dict[str, dict], report_path: Path):
     conservation = {
         formalism: build_conservation_summary(caso, resultado)
@@ -106,7 +137,7 @@ def build_trabalho_report(caso, resultados: dict[str, dict], report_path: Path):
     comparison = compare_formalisms(resultados)
 
     lines = [
-        f"# Relatorio do Trabalho - {caso['name']}",
+        f"# Relatorio Comparativo do Trabalho - {caso['name']}",
         "",
         "## Formalismos executados",
         "",
@@ -154,7 +185,7 @@ def build_trabalho_report(caso, resultados: dict[str, dict], report_path: Path):
         )
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text("\n".join(lines), encoding="utf-8")
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def run_all_formalisms(caso):

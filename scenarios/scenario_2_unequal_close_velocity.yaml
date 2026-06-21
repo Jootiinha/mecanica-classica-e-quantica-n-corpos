@@ -1,0 +1,28 @@
+name: "Cenario 2 - Massas diferentes - Proximas com velocidade"
+
+physics:
+  gravity: 1.0
+  eps: 0.03
+  m1: 1.0
+  m2: 3.003003003003003e-06
+
+  initial_position_body_1: [0.0, 0.0, 0.0]
+  initial_position_body_2: [0.8, 0.0, 0.0]
+  initial_velocity_body_1: [0.0, 0.0, 0.0]
+  initial_velocity_body_2: [0.0, 1.10, 0.0]
+
+  center_mass_velocity: [0.0, 0.0, 0.08]
+  massa_variavel: false
+  tau1: null
+  tau2: null
+  t_final: 20.0
+  n_pontos: 4000
+
+chart:
+  fps: 30
+  dpi: 200
+  skip: 4
+  skip_pillow: 12
+  dpi_pillow: 90
+  mostrar_grafico: false
+  salvar_animacao: true

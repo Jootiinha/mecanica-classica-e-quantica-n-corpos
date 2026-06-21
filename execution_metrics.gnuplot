@@ -17,11 +17,13 @@ plot datafile every ::1 using 1:3:xticlabels(2) with linespoints lw 2 pt 7 title
      '' every ::1 using 1:4:(sprintf("%.2f", $4)) with labels offset 0,-1 tc rgb "#009688" notitle
 
 set ylabel "CPU medio (%)"
-plot datafile every ::1 using 1:5:xticlabels(2) with linespoints lw 2 pt 9 title "CPU medio", \
-     '' every ::1 using 1:5:(sprintf("%.2f", $5)) with labels offset 0,1 tc rgb "#7f00ff" notitle
+plot datafile every ::1 using 1:5:xticlabels(2) with linespoints lw 2 pt 9 title "CPU medio do processo", \
+     '' every ::1 using 1:5:(sprintf("%.2f", $5)) with labels offset 0,1 tc rgb "#7f00ff" notitle, \
+     datafile every ::1 using 1:6:xticlabels(2) with linespoints lw 2 pt 13 title "CPU media da maquina", \
+     '' every ::1 using 1:6:(strlen(stringcolumn(6)) > 0 ? sprintf("%.2f", $6) : "") with labels offset 0,-1 tc rgb "#009688" notitle
 
 set ylabel "Memoria (MB)"
-plot datafile every ::1 using 1:6:xticlabels(2) with linespoints lw 2 pt 11 title "Pico de memoria", \
-     '' every ::1 using 1:6:(sprintf("%.2f", $6)) with labels offset 0,1 tc rgb "#7f00ff" notitle
+plot datafile every ::1 using 1:7:xticlabels(2) with linespoints lw 2 pt 11 title "Pico de memoria", \
+     '' every ::1 using 1:7:(sprintf("%.2f", $7)) with labels offset 0,1 tc rgb "#7f00ff" notitle
 
 unset multiplot
