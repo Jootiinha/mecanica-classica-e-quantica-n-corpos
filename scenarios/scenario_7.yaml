@@ -5,19 +5,22 @@ physics:
   eps: 0.03 # Evita que a forca fique infinita quando os corpos se aproximam muito.
   m1: 1.0
   m2: 0.000003
-  r1: [-0.5, 0.0, 0.0]
-  r2: [3.0, 0.0, 0.0]
-  v1: [0.0, 0.0, 0.0]
-  v2: [0.0, 0.577, 0.0]
-  v_cm: [0.0, 0.0, 0.06] # Velocidade do centro de massa do objeto
+
+  initial_position_body_1: [-0.5, 0.0, 0.0]
+  initial_position_body_2: [3.0, 0.0, 0.0]
+  initial_velocity_body_1: [0.0, 0.0, 0.0]
+  initial_velocity_body_2: [0.0, 0.577, 0.0]
+  
+  center_mass_velocity: [0.0, 0.0, 0.06] # Velocidade do centro de massa do objeto
   massa_variavel: True
   tau1: 60.0 # Tempo característico de perda de massa dos corpos 1 e 2
   tau2: 1000.0 # Tempo característico de perda de massa dos corpos 1 e 2
   t_final: 700.0  # Tempo da simulação em segundos
+  n_pontos: 4000
             
 
 chart:
-  n_pontos: 4000
+  
   fps: 30
   dpi: 200
   skip: 4

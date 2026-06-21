@@ -18,68 +18,40 @@ from src.calculos import (
 )
 
 def simular_dois_corpos_3d(caso):
-    
-    if caso['massa_variavel'] == True:
-        if caso['tau1'] is None or caso['tau2'] is None:
+
+    if caso['physics']['massa_variavel'] == True:
+        if caso['physics']['tau1'] is None or caso['physics']['tau2'] is None:
             raise ValueError("Para massa variavel, tau1 e tau2 precisam ser definidos")
     
     # Posição corpo 1
-    r1_0 = np.array(caso['r1'], dtype=float)
-    r2_0 = np.array(caso['r2'], dtype=float)
+    initial_position_body_1 = np.array(caso['physics']['initial_position_body_1'], dtype=float)
+    initial_position_body_2 = np.array(caso['physics']['initial_position_body_2'], dtype=float)
     
     # Posição corpo 2
-    v1_0 = np.array(caso['v1'], dtype=float)
-    v2_0 = np.array(caso['v2'], dtype=float)
+    initial_velocity_body_1 = np.array(caso['physics']['initial_velocity_body_1'], dtype=float)
+    initial_velocity_body_2 = np.array(caso['physics']['initial_velocity_body_2'], dtype=float)
 
-    V_CM = np.array([0.0, 0.0, 0.0], dtype=float)
-
-    if caso['V_CM'] is not None:
-        V_CM = np.array(caso['V_CM'], dtype=float)
-        if V_CM.size == 0:
-            V_CM = np.array([0.0, 0.0, 0.0], dtype=float)
+    center_mass_velocity = np.array([0.0, 0.0, 0.0], dtype=float)
     
-    v1_0 = v1_0 + V_CM
-    v2_0 = v2_0 + V_CM
+    # Soma de vetores
+    initial_velocity_body_1 = initial_velocity_body_1 + center_mass_velocity
+    initial_velocity_body_2 = initial_velocity_body_2 + center_mass_velocity
 
-    r_com_0 = posicao_centro_massa(caso['m1'], r1_0, caso['m2'], r2_0)
-    v_com_0 = velocidade_centro_massa(caso['m1'], v1_0, caso['m2'], v2_0)
-
-    print(12*'=')
-    print(
-        f"""
-            G => {caso['G']}
-            M1 INICIAL \t {caso['m1']}
-            M2 INICIAL \t {caso['m2']}
-            m1/m2 INICIAL \t {caso['m1'] / caso['m2']}
-            eps \t {caso['eps']}
-            massa variavel \t {caso['massa_variavel']}
-            tau1 \t {caso['tau1']}
-            tau2 \t {caso['tau2']}
-            m1(t_final)/m1(0) \t {np.exp(-caso['t_final'] / caso['tau1'])}
-            m2(t_final)/m2(0) \t {np.exp(-caso['t_final'] / caso['tau2'])}
-            V_CM \t {caso['V_CM']}
-            r1(0) \t { r1_0}
-            r2(0) \t { r2_0}
-            v1(0) \t { v1_0 }
-            v2(0) \t { v2_0}
-            CM inicial \t { r_com_0 }
-            V_CM inicial \t { v_com_0 }
-        """
-    )
-    print(12*'=')
+    r_com_0 = posicao_centro_massa(caso['physics']['m1'], initial_position_body_1, caso['physics']['m2'], initial_position_body_2)
+    v_com_0 = velocidade_centro_massa(caso['physics']['m1'], initial_velocity_body_1, caso['physics']['m2'], initial_velocity_body_2)
 
     init_parameters = np.concatenate(
-        (r1_0, r2_0, v1_0, v2_0)
+        (initial_position_body_1, initial_position_body_2, initial_velocity_body_1, initial_velocity_body_2)
     )
 
-    time_span = np.linspace(0.0, caso['t_final'], caso['n_pontos'])
+    time_span = np.linspace(0.0, caso['physics']['t_final'], caso['physics']['n_pontos'])
 
     solver_object = solve_ivp(
         equacao_de_dois_corpos,
-        [0.0, caso['t_final']],
+        [0.0, caso['physics']['t_final']],
         init_parameters,
         t_eval=time_span,
-        args=(caso['G'], caso['m1'], caso['m2'], caso['eps'], caso['massa_variavel'], caso['tau1'], caso['tau2']),
+        args=(caso['physics']['gravity'], caso['physics']['m1'], caso['physics']['m2'], caso['physics']['eps'], caso['physics']['massa_variavel'], caso['physics']['tau1'], caso['physics']['tau2']),
         method='DOP853',
         rtol=1e-10,
         atol=1e-10
@@ -100,14 +72,14 @@ def simular_dois_corpos_3d(caso):
     v1_sol = solucao[:, 6:9]
     v2_sol = solucao[:, 9:12]
 
-    m1_series = massa_no_tempo(time_span, caso['m1'], caso['tau1'], caso['massa_variavel'])
-    m2_series = massa_no_tempo(time_span, caso['m2'], caso['tau2'], caso['massa_variavel'])
+    m1_series = massa_no_tempo(time_span, caso['physics']['m1'], caso['physics']['tau1'], caso['physics']['massa_variavel'])
+    m2_series = massa_no_tempo(time_span, caso['physics']['m2'], caso['physics']['tau2'], caso['physics']['massa_variavel'])
 
     r_com_sol = (
         m1_series[:, None] * r1_sol + m2_series[:, None] * r2_sol
     ) / (m1_series[:, None] + m2_series[:, None])
 
-    E = energial_total(r1_sol, r2_sol, v1_sol, v2_sol, caso['G'], m1_series, m2_series, caso['eps'])
+    E = energial_total(r1_sol, r2_sol, v1_sol, v2_sol, caso['physics']['gravity'], m1_series, m2_series, caso['physics']['eps'])
     P = momento_liner_total(v1_sol, v2_sol, m1_series, m2_series)
     L = momento_angular_total(r1_sol, r2_sol, v1_sol, v2_sol, m1_series, m2_series)
 
@@ -134,20 +106,20 @@ def simular_dois_corpos_3d(caso):
     ax_static.set_xlabel("x")
     ax_static.set_ylabel("y")
     ax_static.set_zlabel("z")
-    ax_static.set_title(caso['nome'], pad=20)
+    ax_static.set_title(caso['name'], pad=20)
 
     ax_static.view_init(elev=25, azim=35)
     ax_static.legend(loc="lower left")
 
     set_axes_equal_3d(ax_static, r1_sol, r2_sol, r_com_sol, fator_visual_z=0.75)
 
-    if caso['mostrar_grafico']:
+    if caso['chart']['mostrar_grafico']:
         print("Exibindo gráfico estático...")
         plt.show()
     else:
         plt.close(fig_static)
 
-    if not caso['salvar_animacao']:
+    if not caso['chart']['salvar_animacao']:
         print("Exportação de animação desativada para este cenário.")
         return {
             "time": time_span,
@@ -166,12 +138,12 @@ def simular_dois_corpos_3d(caso):
         }
 
     writer_ffmpeg_disponivel = animation.writers.is_available("ffmpeg")
-    skip_animacao = caso["skip"]
-    dpi_animacao = caso["dpi"]
+    skip_animacao = caso['chart']["skip"]
+    dpi_animacao = caso['chart']["dpi"]
 
     if not writer_ffmpeg_disponivel:
-        skip_animacao = max(skip_animacao, caso.get("skip_pillow", 12))
-        dpi_animacao = min(dpi_animacao, caso.get("dpi_pillow", 100))
+        skip_animacao = max(skip_animacao, caso['chart']["skip_pillow"], 12)
+        dpi_animacao = min(dpi_animacao, caso['chart']["dpi_pillow"], 100)
 
     # Animacao 3d
     print(
@@ -192,7 +164,7 @@ def simular_dois_corpos_3d(caso):
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    ax.set_title(caso['nome'], pad=20)
+    ax.set_title(caso['name'], pad=20)
 
     ax.view_init(elev=25, azim=35)
 
@@ -278,7 +250,7 @@ def simular_dois_corpos_3d(caso):
 
     pasta_saida = os.path.join("outputs", "adhoc")
     os.makedirs(pasta_saida, exist_ok=True)
-    base_nome_arquivo = _slugify_nome_arquivo(caso["nome"])
+    base_nome_arquivo = _slugify_nome_arquivo(caso["name"])
     nome_video = None
 
     if writer_ffmpeg_disponivel:
@@ -296,7 +268,7 @@ def simular_dois_corpos_3d(caso):
     elif animation.writers.is_available("pillow"):
         print("FFmpeg indisponível. Salvando animação com Pillow...")
         nome_video = os.path.join(pasta_saida, f"{base_nome_arquivo}.gif")
-        writer = animation.PillowWriter(fps=caso['fps'], metadata=dict(artist="MCQ"))
+        writer = animation.PillowWriter(fps=caso['chart']['fps'], metadata=dict(artist="MCQ"))
         anim.save(
             nome_video,
             writer=writer,
