@@ -15,14 +15,14 @@ physics:
   massa_variavel: false
   tau1: null
   tau2: null
-  t_final: 35.0
+  t_final: 20.0
   n_pontos: 4000
 
 chart:
   fps: 30
   dpi: 200
   skip: 4
-  skip_pillow: 12
-  dpi_pillow: 90
+  skip_pillow: 4
+  dpi_pillow: 200
   mostrar_grafico: false
   salvar_animacao: true
