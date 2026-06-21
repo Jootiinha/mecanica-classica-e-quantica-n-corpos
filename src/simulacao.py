@@ -18,8 +18,7 @@ from src.calculos import (
 )
 
 def simular_dois_corpos_3d(caso):
-    # Salvar sempre o vídeo e o gráfico
-
+    
     if caso['massa_variavel'] == True:
         if caso['tau1'] is None or caso['tau2'] is None:
             raise ValueError("Para massa variavel, tau1 e tau2 precisam ser definidos")

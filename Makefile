@@ -14,7 +14,7 @@ install:
 
 run-adhoc:
 	mkdir -p outputs/.mpl-cache
-	PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=outputs/.mpl-cache MPLBACKEND=Agg RUN_LABEL="$(RUN_LABEL)" poetry run python -m main
+	PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=outputs/.mpl-cache MPLBACKEND=Agg RUN_LABEL="$(RUN_LABEL)" SCENARIO="$(SCENARIO)" poetry run python -m main
 
 execution_chart:
 	@test -f outputs/performance_metrics.csv || (echo "Arquivo outputs/performance_metrics.csv nao encontrado."; exit 1)

@@ -14,7 +14,6 @@ except ImportError:  # pragma: no cover - unavailable on some non-Unix platforms
 CSV_HEADERS = [
     "timestamp_utc",
     "run_label",
-    "scenario_count",
     "wall_time_seconds",
     "cpu_time_seconds",
     "avg_cpu_percent",
@@ -24,7 +23,6 @@ CSV_HEADERS = [
 
 @dataclass(frozen=True)
 class ExecutionMetrics:
-    scenario_count: int
     wall_time_seconds: float
     cpu_time_seconds: float
     avg_cpu_percent: float
@@ -36,7 +34,6 @@ class ExecutionMetrics:
         return [
             self.timestamp_utc,
             self.run_label or "",
-            self.scenario_count,
             f"{self.wall_time_seconds:.6f}",
             f"{self.cpu_time_seconds:.6f}",
             f"{self.avg_cpu_percent:.2f}",
@@ -49,7 +46,7 @@ class ExecutionProfiler:
         self._start_wall_time = perf_counter()
         self._start_cpu_time = process_time()
 
-    def finish(self, scenario_count: int, run_label: str | None = None):
+    def finish(self, run_label: str | None = None):
         wall_time_seconds = perf_counter() - self._start_wall_time
         cpu_time_seconds = process_time() - self._start_cpu_time
         avg_cpu_percent = (
@@ -57,7 +54,6 @@ class ExecutionProfiler:
         )
 
         return ExecutionMetrics(
-            scenario_count=scenario_count,
             wall_time_seconds=wall_time_seconds,
             cpu_time_seconds=cpu_time_seconds,
             avg_cpu_percent=avg_cpu_percent,
@@ -99,18 +95,44 @@ def _ensure_csv_schema(csv_path: Path):
     if current_header == CSV_HEADERS:
         return
 
-    if current_header == [header for header in CSV_HEADERS if header != "run_label"]:
+    if current_header == ["timestamp_utc", "scenario_count", "wall_time_seconds", "cpu_time_seconds", "avg_cpu_percent", "peak_memory_mb"]:
         migrated_rows = [CSV_HEADERS]
         for row in rows[1:]:
             migrated_rows.append(
                 [
                     row[0] if len(row) > 0 else "",
                     "",
-                    row[1] if len(row) > 1 else "",
                     row[2] if len(row) > 2 else "",
                     row[3] if len(row) > 3 else "",
                     row[4] if len(row) > 4 else "",
                     row[5] if len(row) > 5 else "",
+                ]
+            )
+
+        with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerows(migrated_rows)
+        return
+
+    if current_header == [
+        "timestamp_utc",
+        "run_label",
+        "scenario_count",
+        "wall_time_seconds",
+        "cpu_time_seconds",
+        "avg_cpu_percent",
+        "peak_memory_mb",
+    ]:
+        migrated_rows = [CSV_HEADERS]
+        for row in rows[1:]:
+            migrated_rows.append(
+                [
+                    row[0] if len(row) > 0 else "",
+                    row[1] if len(row) > 1 else "",
+                    row[3] if len(row) > 3 else "",
+                    row[4] if len(row) > 4 else "",
+                    row[5] if len(row) > 5 else "",
+                    row[6] if len(row) > 6 else "",
                 ]
             )
 
