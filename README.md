@@ -1,6 +1,6 @@
-# Simulação de Interação Gravitacional 2D (N-Corpos)
+# Simulação de Interação Gravitacional de 2 Corpos
 
-Este projeto implementa um simulador numérico bidimensional para a interação gravitacional de N-corpos (focado inicialmente em problemas de 2 corpos). Desenvolvido com foco em arquitetura modular, o software separa o motor de cálculo físico da geração de animações.
+Este projeto implementa simulações gravitacionais configuradas por arquivos YAML, com foco em experimentos de dois corpos, cenários com massas iguais ou diferentes, e casos com massa variável. O software separa a definição dos cenários, o motor físico e a geração de artefatos visuais.
 
 ---
 
@@ -15,9 +15,9 @@ Este projeto implementa um simulador numérico bidimensional para a interação 
 poetry install
 ```
 
-### 2. Executar os calculos
+### 2. Executar um cenário específico
 ```bash
-poetry run python main.py
+SCENARIO=scenario_7.yaml poetry run python -m main
 ```
 
 ### 3. Gerar animações
@@ -29,16 +29,42 @@ poetry run python src/create_animations.py
 ```bash
 make install
 make run
+make run-adhoc SCENARIO=scenario_7.yaml RUN_LABEL=baseline
 ```
 
-**Para alterar os cenários modifique diretamente o arquivo config.yaml**
+## Execução
+
+### Rodar todos os cenários
+
+O alvo abaixo percorre todos os arquivos `*.yaml` dentro de `scenarios/`, executa um por vez e registra as métricas em `outputs/performance_metrics.csv` usando o nome do arquivo como `run_label`.
+
+```bash
+make run
+```
+
+### Rodar um cenário específico
+
+Use `run-adhoc` quando quiser executar só um arquivo YAML e definir um identificador explícito para comparação de performance.
+
+```bash
+make run-adhoc SCENARIO=scenario_7.yaml RUN_LABEL=teste_otimizacao
+```
+
+### Gerar gráfico das execuções
+
+```bash
+make execution_chart
+```
+
+O gráfico é salvo em `outputs/charts/execution_metrics.png`.
 
 ## 🚀 Funcionalidades
 
-- **Configuração Dinâmica:** Todos os cenários, massas, posições e velocidades iniciais são controlados centralizadamente por um arquivo `config.yaml`.
+- **Configuração Dinâmica:** Cada experimento é definido por um arquivo YAML em `scenarios/`.
 - **Motor Físico Otimizado:** Cálculos baseados na Lei da Gravitação Universal de Newton 
 - **Renderização Eficiente:** Geração de animações `.gif` via Matplotlib 
-- **Execução em Lote:** Capacidade de simular múltiplos cenários complexos de forma sequencial com um único comando.
+- **Execução em Lote:** Capacidade de simular múltiplos cenários sequencialmente com `make run`.
+- **Medição de Performance:** Registro de tempo, CPU e memória em CSV e geração de gráfico histórico com `gnuplot`.
 
 ---
 
@@ -49,13 +75,13 @@ O projeto adota uma estrutura modular para garantir que os dados brutos da físi
 ```text
 MECANICA-CLASSICA-E-QUANTICA-N-CORPOS/
 │
+├── scenarios/                    # Cenários de entrada em YAML
 ├── src/                          # Código fonte do projeto
-│   ├── simulador_gravitacao.py   # Motor físico (equações de movimento)
-│   ├── mecanica_problema_dois_corpos.py   #Simulação alternativa
+│   ├── simulacao.py              # Motor físico principal
+│   ├── performance_metrics.py    # Coleta e persistência de métricas
 │   └── create_animations.py      # Renderizador de gráficos e animações
 │
-├── config.yaml                   # Definição e parâmetros dos cenários
-├── main.py                       # Orquestrador (calcula a física em lote)
+├── main.py                       # Orquestrador da execução por cenário
 ├── pyproject.toml                # Dependências e configuração do Poetry
 │
 ├── outputs/                      # Arquivos gerados pela execução

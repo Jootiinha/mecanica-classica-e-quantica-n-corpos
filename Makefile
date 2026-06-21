@@ -3,14 +3,23 @@
 help:
 	@echo "Comandos disponíveis:"
 	@echo "  make install  - Instala as dependências do projeto com poetry"
-	@echo "  make run      - Executa a aplicação com poetry sem gerar __pycache__"
-	@echo "  make run-adhoc RUN_LABEL=nome - Executa a simulacao adhoc e salva o nome no CSV"
+	@echo "  make run      - Executa todos os cenarios YAML em scenarios/"
+	@echo "  make run-adhoc SCENARIO=arquivo.yaml RUN_LABEL=nome - Executa um cenario e salva metricas"
 	@echo "  make execution_chart - Gera um grafico PNG com o historico de execucoes"
 	@echo "  make clean    - Remove arquivos __pycache__ e .pyc"
 	@echo "  make help     - Mostra esta mensagem"
 
 install:
 	poetry install
+
+run:
+	mkdir -p outputs/.mpl-cache
+	@for scenario in scenarios/*.yaml; do \
+		filename="$${scenario##*/}"; \
+		label="$${filename%.yaml}"; \
+		echo "Executando $$filename"; \
+		PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=outputs/.mpl-cache MPLBACKEND=Agg RUN_LABEL="$$label" SCENARIO="$$filename" poetry run python -m main; \
+	done
 
 run-adhoc:
 	mkdir -p outputs/.mpl-cache
