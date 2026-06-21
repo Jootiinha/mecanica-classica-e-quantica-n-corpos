@@ -1,13 +1,13 @@
 import numpy as np
 import os
-from plot import set_axes_equal_3d
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-from utils import _slugify_nome_arquivo
+from src.plot import set_axes_equal_3d
+from src.utils import _slugify_nome_arquivo
 
-from calculos import (
+from src.calculos import (
         posicao_centro_massa
     ,   velocidade_centro_massa
     ,   equacao_de_dois_corpos

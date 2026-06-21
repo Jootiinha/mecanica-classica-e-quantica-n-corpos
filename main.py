@@ -1,53 +1,70 @@
 import os
-import yaml
-from src.simulador_gravitacao import simular_gravitacao__2d
-import numpy as np
+from src.performance_metrics import ExecutionProfiler, append_metrics_csv
+from src.simulacao import simular_dois_corpos_3d
 
-def executar_simulacoes():
-    # 1. Carrega as configurações do YAML
-    with open("config.yaml", "r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
-    
-    # Parâmetros globais padrão (caso o cenário não sobrescreva)
-    g_global = config.get("g", 1500.0)
-    passos_global = config.get("total_passos", 500)
-    dt_global = config.get("dt", 0.016)
 
-    # 2. Cria a pasta de saída se ela não existir
-    pasta_saida = "outputs"
-    os.makedirs(pasta_saida, exist_ok=True)
+G = 1.0
+eps = 0.03  # Evita que a forca fique infinita quando os corpos se aproximam muito.
 
-    print(f"=== Iniciando Processamento de {len(config['cenarios'])} Cenários ===")
 
-    # 3. Itera por todos os cenários configurados no arquivo YAML
-    for cenario in config["cenarios"]:
-        nome = cenario["nome"]
-        print(f"\nRodando física para: {nome}...")
+def construir_casos():
+    casos = []
+    # Migrar para YAML's
+    casos.append(
+        {
+            "nome": "Cenário 7 - Massas difernetes e Estrea com perda moderada",
+            "G": G,
+            "m1": 1.0,
+            "m2": (1.0 / 333000.0),
+            "eps": eps, # Parametro de suavização numérica da força gravitacional
+            "r1":   [-0.5, 0.0, 0.0],
+            "r2":   [3.0, 0.0, 0.0],
+            "v1":   [0.0, 0.0, 0.0],
+            "v2":   [0.0, 0.577, 0.0],
+            "V_CM": [0.0, 0.0, 0.06], # Velocidade do centro de massa do objeto
+            "massa_variavel": True,
+            "tau1": 60.0, # Tempo característico de perda de massa dos corpos 1 e 2
+            "tau2": 1000.0, # Tempo característico de perda de massa dos corpos 1 e 2
+            "t_final": 700.0, # Tempo da simulação em segundos
+            
+            # Geração do vídeo
+            "n_pontos": 4000,
+            "fps": 30,
+            "dpi": 200,
+            "skip": 4,
+            "skip_pillow": 12,
+            "dpi_pillow": 90,
+            "mostrar_grafico": False,
+            "salvar_animacao": True
+        }
+    )
+    return casos
 
-        # Coleta os parâmetros individuais do cenário mapeado no YAML
-        m1 = cenario["m1"]
-        m2 = cenario["m2"]
-        r1_init = cenario["r1_init"]
-        r2_init = cenario["r2_init"]
-        v1_init = cenario["v1_init"]
-        v2_init = cenario["v2_init"]
 
-        # Permite que cenários específicos tenham durações ou dts customizados, caso contrário usa o global
-        total_passos = cenario.get("total_passos", passos_global)
-        dt = cenario.get("dt", dt_global)
-        g = cenario.get("g", g_global)
+def executar_simulacao_adhoc():
+    casos = construir_casos()
 
-        hist_r, hist_Rcm, _ = simular_gravitacao__2d(
-            g, m1, m2, r1_init, r2_init, v1_init, v2_init, total_passos, dt
-        )
+    for caso in casos:
+        simular_dois_corpos_3d(caso=caso)
 
-        caminho_posicoes = os.path.join(pasta_saida, f"{nome}_posicoes.npy")
-        caminho_cm = os.path.join(pasta_saida, f"{nome}_centro_massa.npy")
+    print(12 * "=")
+    print("Final da simulação")
+    print(12 * "=")
 
-        np.save(caminho_posicoes, hist_r)
-        np.save(caminho_cm, hist_Rcm)
+    return len(casos), "outputs"
 
-    print("simulações concluídas")
 
 if __name__ == "__main__":
-    executar_simulacoes()
+    profiler = ExecutionProfiler()
+    os.makedirs("outputs", exist_ok=True)
+    run_label = os.environ.get("RUN_LABEL")
+
+    scenario_count, output_dir = executar_simulacao_adhoc()
+    metrics = profiler.finish(scenario_count=scenario_count, run_label=run_label)
+    caminho_csv = append_metrics_csv(output_dir, metrics)
+
+    print(f"Métricas salvas em: {caminho_csv}")
+    print(f"Tempo total: {metrics.wall_time_seconds:.3f}s")
+    print(f"Tempo de CPU: {metrics.cpu_time_seconds:.3f}s")
+    if metrics.peak_memory_mb is not None:
+        print(f"Pico de memória: {metrics.peak_memory_mb:.3f} MB")
