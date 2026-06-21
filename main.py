@@ -15,7 +15,7 @@ def run_simulation():
 
 
 if __name__ == "__main__":
-    SAVE_METRICS = True
+    SAVE_METRICS = False
 
     os.makedirs("outputs", exist_ok=True)
     run_label = os.environ.get("RUN_LABEL")
