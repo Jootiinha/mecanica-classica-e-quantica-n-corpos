@@ -1,8 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from src.plot import render_simulation_artifacts
-
 from src.calculos import (
         equacao_de_dois_corpos
     ,   massa_no_tempo
@@ -65,4 +63,11 @@ def simular_dois_corpos_3d(caso):
         m1_series[:, None] * r1_sol + m2_series[:, None] * r2_sol
     ) / (m1_series[:, None] + m2_series[:, None])
 
-    render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol)
+    return {
+        "time": time_span,
+        "r1": r1_sol,
+        "r2": r2_sol,
+        "r_com": r_com_sol,
+        "m1_t": m1_series,
+        "m2_t": m2_series,
+    }
