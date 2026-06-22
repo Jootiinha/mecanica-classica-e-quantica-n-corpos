@@ -2,6 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from matplotlib.lines import Line2D
 
 from src.utils import _slugify_nome_arquivo, build_render_output_dir
 
@@ -52,7 +53,7 @@ def set_axes_equal_3d(ax, r1_sol, r2_sol, r_com_sol=None, fator_visual_z=0.75):
 
 
 def render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism="newtonian"):
-    _render_static_plot(caso, r1_sol, r2_sol, r_com_sol)
+    _render_static_plot(caso, r1_sol, r2_sol, r_com_sol, formalism)
 
     if not caso["chart"]["salvar_animacao"]:
         print("Exportação de animação desativada para este cenário.")
@@ -61,7 +62,76 @@ def render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol, form
     return _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism)
 
 
-def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol):
+def _format_param_value(value):
+    if value is None:
+        return "-"
+    if isinstance(value, bool):
+        return "sim" if value else "nao"
+    if isinstance(value, (int, np.integer)):
+        return str(value)
+    if isinstance(value, (float, np.floating)):
+        if float(value).is_integer():
+            return str(int(value))
+        return f"{value:.3g}"
+    return str(value)
+
+
+def _build_plot_title(caso, formalism):
+    scenario_name = caso["name"]
+    suffix = f" [{formalism}]"
+    if scenario_name.endswith(suffix):
+        scenario_name = scenario_name[: -len(suffix)]
+
+    formalism_label = {
+        "newtonian": "Newtoniano",
+        "lagrangian": "Lagrangiano",
+        "hamiltonian": "Hamiltoniano",
+    }.get(formalism, formalism.capitalize())
+    return f"Simulacao gravitacional 3D\n{scenario_name} | Formalismo: {formalism_label}"
+
+
+def _build_parameter_labels(caso):
+    physics = caso["physics"]
+    labels = [
+        f"G={_format_param_value(physics['gravity'])} | eps={_format_param_value(physics['eps'])}",
+        f"m1={_format_param_value(physics['m1'])} | m2={_format_param_value(physics['m2'])}",
+        f"t_final={_format_param_value(physics['t_final'])} | n={_format_param_value(physics['n_pontos'])}",
+    ]
+
+    if physics["massa_variavel"]:
+        labels.append(
+            "massa variavel=sim"
+            f" | tau1={_format_param_value(physics['tau1'])}"
+            f" | tau2={_format_param_value(physics['tau2'])}"
+        )
+    else:
+        labels.append("massa variavel=nao")
+
+    return labels
+
+
+def _add_legends(ax, caso):
+    series_legend = ax.legend(loc="lower left", title="Trajetorias")
+    ax.add_artist(series_legend)
+
+    parameter_handles = [
+        Line2D([], [], linestyle="none", marker=None, label=label)
+        for label in _build_parameter_labels(caso)
+    ]
+    ax.legend(
+        handles=parameter_handles,
+        loc="upper left",
+        bbox_to_anchor=(0.02, 0.98),
+        borderaxespad=0.0,
+        framealpha=0.9,
+        title="Parametros",
+        handlelength=0,
+        handletextpad=0,
+        fontsize=9,
+    )
+
+
+def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol, formalism):
     fig_static = plt.figure(figsize=(9, 8))
     ax_static = fig_static.add_subplot(111, projection="3d")
 
@@ -83,11 +153,12 @@ def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol):
     ax_static.set_xlabel("x")
     ax_static.set_ylabel("y")
     ax_static.set_zlabel("z")
-    ax_static.set_title(caso["name"], pad=20)
+    ax_static.set_title(_build_plot_title(caso, formalism), pad=24)
     ax_static.view_init(elev=25, azim=35)
-    ax_static.legend(loc="lower left")
+    _add_legends(ax_static, caso)
 
     set_axes_equal_3d(ax_static, r1_sol, r2_sol, r_com_sol, fator_visual_z=0.75)
+    fig_static.tight_layout()
 
     if caso["chart"]["mostrar_grafico"]:
         print("Exibindo gráfico estático...")
@@ -123,7 +194,7 @@ def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism):
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    ax.set_title(caso["name"], pad=20)
+    ax.set_title(_build_plot_title(caso, formalism), pad=24)
     ax.view_init(elev=25, azim=35)
 
     set_axes_equal_3d(ax, r1_sol, r2_sol, r_com_sol, fator_visual_z=0.75)
@@ -134,7 +205,8 @@ def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism):
     point1, = ax.plot([], [], [], "o", color="darkblue", markersize=8)
     point2, = ax.plot([], [], [], "o", color="red", markersize=8)
     point_com, = ax.plot([], [], [], "o", color="black", markersize=5)
-    ax.legend(loc="lower left")
+    _add_legends(ax, caso)
+    fig.tight_layout()
 
     info_text = ax.text2D(
         0.98,

@@ -29,7 +29,8 @@ poetry run python src/create_animations.py
 ```bash
 make install
 make run
-make run-adhoc SCENARIO=scenario_7.yaml RUN_LABEL=baseline
+make run-adhoc SCENARIO=scenario_7_unequal_star_moderate_mass_loss.yaml RUN_LABEL=baseline
+make web
 ```
 
 ## Execução
@@ -47,7 +48,21 @@ make run
 Use `run-adhoc` quando quiser executar só um arquivo YAML e definir um identificador explícito para comparação de performance.
 
 ```bash
-make run-adhoc SCENARIO=scenario_7.yaml RUN_LABEL=teste_otimizacao
+make run-adhoc SCENARIO=scenario_7_unequal_star_moderate_mass_loss.yaml RUN_LABEL=teste_otimizacao
+```
+
+### Rodar o protótipo web
+
+O protótipo web usa `Streamlit` para a interface e `Plotly` para a visualização 3D interativa. Ele reaproveita o solver atual e permite alterar parâmetros, recalcular a órbita e inspecionar um instante específico da trajetória.
+
+```bash
+make web
+```
+
+ou:
+
+```bash
+poetry run streamlit run app.py
 ```
 
 ### Gerar gráfico das execuções

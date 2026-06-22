@@ -1,4 +1,4 @@
-.PHONY: clean run render render-all install help execution_chart
+.PHONY: clean run render render-all install help execution_chart web
 
 FORMALISM ?= newtonian
 FORMALISMS := newtonian lagrangian hamiltonian
@@ -11,6 +11,7 @@ help:
 	@echo "  make render SCENARIO=arquivo.yaml FORMALISM=hamiltonian - Gera graficos e animacao do formalismo escolhido"
 	@echo "  make render-all - Renderiza todos os cenarios com resultados .npz disponiveis para todos os formalismos"
 	@echo "  make execution_chart FORMALISM=newtonian - Gera um grafico PNG do historico do formalismo"
+	@echo "  make web      - Inicia o prototipo Streamlit para explorar parametros interativamente"
 	@echo "  make clean    - Remove arquivos __pycache__ e .pyc"
 	@echo "  make help     - Mostra esta mensagem"
 
@@ -60,6 +61,9 @@ execution_chart:
 	@FORMALISM="$(FORMALISM)" poetry run python -m src.prepare_execution_chart_data
 	@gnuplot -e "datafile='outputs/formalisms/$(FORMALISM)/charts/execution_metrics_plot_data.tsv'; outfile='outputs/formalisms/$(FORMALISM)/charts/execution_metrics.png'" execution_metrics.gnuplot
 	@echo "Grafico gerado em outputs/formalisms/$(FORMALISM)/charts/execution_metrics.png"
+
+web:
+	poetry run streamlit run app.py
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
