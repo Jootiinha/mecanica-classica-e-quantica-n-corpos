@@ -7,14 +7,10 @@ flowchart TD
     A[Cenario YAML] --> B[main.py]
     B --> C[Simulacao por formalismo]
     C --> D[Resultados por formalismo]
-    C --> E[Metricas por formalismo]
-    C --> F[Relatorios do trabalho]
+    C --> E[Relatorios do trabalho]
 
-    D --> G[render_results.py]
-    G --> H[Graficos e animacoes]
-
-    E --> I[prepare_execution_chart_data.py]
-    I --> J[Grafico de performance]
+    D --> F[render_results.py]
+    F --> G[Graficos e animacoes]
 ```
 
 ## Papéis dos módulos
