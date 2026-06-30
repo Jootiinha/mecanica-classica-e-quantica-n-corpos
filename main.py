@@ -4,9 +4,7 @@ import numpy as np
 
 from src.performance_metrics import ExecutionProfiler, append_metrics_csv
 from src.simulacao import simular_dois_corpos_3d
-from src.analysis import build_formalism_report
 from src.utils import (
-    build_formalism_report_file_path,
     build_metrics_output_dir,
     build_results_file_path_for_formalism,
     load_scenarios,
@@ -29,16 +27,13 @@ def run_simulation():
     metrics = profiler.finish(run_label=run_label)
 
     results_path = build_results_file_path_for_formalism(scenario_file, FORMALISM)
-    report_path = build_formalism_report_file_path(scenario_file, FORMALISM)
     metrics_output_dir = build_metrics_output_dir(FORMALISM)
 
     results_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(results_path, **result)
-    build_formalism_report(scenario_config, FORMALISM, result, report_path)
     csv_path = append_metrics_csv(metrics_output_dir, metrics)
 
     print(f"[{FORMALISM}] Resultados fisicos salvos em: {results_path}")
-    print(f"[{FORMALISM}] Relatorio do trabalho salvo em: {report_path}")
     print(f"[{FORMALISM}] Metricas salvas em: {csv_path}")
     print(f"[{FORMALISM}] Tempo total: {metrics.wall_time_seconds:.3f}s")
     print(f"[{FORMALISM}] Tempo de CPU: {metrics.cpu_time_seconds:.3f}s")
@@ -48,7 +43,7 @@ def run_simulation():
     if metrics.peak_memory_mb is not None:
         print(f"[{FORMALISM}] Pico de memoria: {metrics.peak_memory_mb:.3f} MB")
 
-    return [(FORMALISM, results_path, report_path, csv_path, metrics)]
+    return [(FORMALISM, results_path, csv_path, metrics)]
 
 
 if __name__ == "__main__":

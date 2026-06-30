@@ -19,13 +19,7 @@ def _slugify_nome_arquivo(nome):
 
 
 def build_results_file_path(scenario_file: str):
-    scenario_stem = Path(scenario_file).stem
     return build_results_file_path_for_formalism(scenario_file, "newtonian")
-
-
-def build_report_file_path(scenario_file: str):
-    scenario_stem = Path(scenario_file).stem
-    return build_comparison_report_file_path(scenario_file)
 
 
 def build_formalism_output_dir(formalism: str):
@@ -35,16 +29,6 @@ def build_formalism_output_dir(formalism: str):
 def build_results_file_path_for_formalism(scenario_file: str, formalism: str):
     scenario_stem = Path(scenario_file).stem
     return build_formalism_output_dir(formalism) / "results" / f"{scenario_stem}.npz"
-
-
-def build_formalism_report_file_path(scenario_file: str, formalism: str):
-    scenario_stem = Path(scenario_file).stem
-    return build_formalism_output_dir(formalism) / "reports" / f"{scenario_stem}.md"
-
-
-def build_comparison_report_file_path(scenario_file: str):
-    scenario_stem = Path(scenario_file).stem
-    return Path("outputs") / "comparison" / "reports" / f"{scenario_stem}.md"
 
 
 def build_render_output_dir(formalism: str):

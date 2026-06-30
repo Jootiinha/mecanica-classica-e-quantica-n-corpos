@@ -45,7 +45,7 @@ make run
 
 ### Rodar um cenário específico
 
-Use `run-adhoc` quando quiser executar só um arquivo YAML e definir um identificador explícito para comparação de performance.
+Use `run-adhoc` quando quiser executar só um arquivo YAML e definir um identificador explícito para o benchmark dessa execução.
 
 ```bash
 make run-adhoc SCENARIO=scenario_7_unequal_star_moderate_mass_loss.yaml RUN_LABEL=teste_otimizacao
