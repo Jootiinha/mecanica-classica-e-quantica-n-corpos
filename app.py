@@ -276,21 +276,24 @@ def _clear_persisted_runs() -> None:
     STREAMLIT_RUNS_INDEX_PATH.unlink(missing_ok=True)
 
 
-def _serialize_run_summary(run: dict) -> str:
-    return (
-        f"| {run['label']} | {run['integration_method']} | {run['rtol']:.1e} | "
-        f"{run['atol']:.1e} | {run['elapsed']:.3f}s | {run['n_points']} | "
-        f"{run['nfev']} | {run['energy_drift_max']:.3e} | {run['angular_momentum_drift_max']:.3e} |"
-    )
-
-
-def build_runs_markdown_table(runs: list[dict]) -> str:
-    lines = [
-        "| Rodada | Metodo | rtol | atol | Tempo | Pontos | Avaliacoes | Drift energia | Drift momento angular |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    ]
-    lines.extend(_serialize_run_summary(run) for run in runs)
-    return "\n".join(lines)
+def build_runs_table_rows(runs: list[dict]) -> list[dict[str, str | int | float]]:
+    rows = []
+    for run in runs:
+        rows.append(
+            {
+                "Rodada": f"{run['id']:02d}",
+                "Cenario": run["scenario_name"],
+                "Metodo": run["integration_method"],
+                "rtol": f"{run['rtol']:.1e}",
+                "atol": f"{run['atol']:.1e}",
+                "Tempo de calculo (s)": f"{run['elapsed']:.3f}",
+                "Amostras da trajetoria": run["n_points"],
+                "Avaliacoes da EDO": run["nfev"],
+                "Erro relativo energia": f"{run['energy_drift_max']:.3e}",
+                "Erro relativo momento angular": f"{run['angular_momentum_drift_max']:.3e}",
+            }
+        )
+    return rows
 
 
 def build_series_comparison_chart(
@@ -337,6 +340,28 @@ def build_runtime_comparison_chart(runs: list[dict]) -> go.Figure:
         barmode="group",
         yaxis=dict(title="tempo (s)"),
         yaxis2=dict(title="avaliações", overlaying="y", side="right"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0.0),
+    )
+    return fig
+
+
+def build_drift_summary_chart(runs: list[dict]) -> go.Figure:
+    labels = [run["label"] for run in runs]
+    energy = [run["energy_drift_max"] for run in runs]
+    angular = [run["angular_momentum_drift_max"] for run in runs]
+    linear = [run["linear_momentum_drift_max"] for run in runs]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name="Energia", x=labels, y=energy))
+    fig.add_trace(go.Bar(name="Momento angular", x=labels, y=angular))
+    fig.add_trace(go.Bar(name="Momento linear", x=labels, y=linear))
+
+    fig.update_layout(
+        title="Resumo de erro relativo máximo",
+        height=420,
+        margin=dict(l=0, r=0, t=56, b=0),
+        barmode="group",
+        yaxis=dict(title="erro relativo máximo"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0.0),
     )
     return fig
@@ -405,9 +430,15 @@ def build_animated_plot(
     )
 
     fig.update_layout(
-        title=f"{scenario_name} [{FORMALISM} | {integration_method}]",
+        title=dict(
+            text=f"{scenario_name} [{FORMALISM} | {integration_method}]",
+            x=0.0,
+            xanchor="left",
+            y=0.98,
+            yanchor="top",
+        ),
         height=820,
-        margin=dict(l=0, r=0, t=56, b=0),
+        margin=dict(l=0, r=0, t=104, b=0),
         legend=dict(orientation="h", yanchor="bottom", y=0.02, xanchor="left", x=0.02, bgcolor="rgba(255,255,255,0.72)"),
         scene=dict(
             xaxis_title="x",
@@ -435,7 +466,7 @@ def build_animated_plot(
                 type="buttons",
                 direction="left",
                 x=0.0,
-                y=1.08,
+                y=1.02,
                 showactive=False,
                 buttons=[
                     dict(label="Play", method="animate", args=[None, {"frame": {"duration": playback_ms, "redraw": True}, "transition": {"duration": 0}, "fromcurrent": True}]),
@@ -690,11 +721,11 @@ def main() -> None:
         metrics[2].metric("Pontos integrados", active_run["n_points"])
         metrics[3].metric("Frames exibidos", animated_points)
         metrics[4].metric("Avaliações da EDO", active_run["nfev"])
-        metrics[5].metric("Drift máx. energia", f"{active_run['energy_drift_max']:.3e}")
+        metrics[5].metric("Erro rel. máx. energia", f"{active_run['energy_drift_max']:.3e}")
 
         st.caption(
-            "A animação mostra a rodada selecionada na barra lateral. Os controles laterais "
-            "ajustam densidade de frames e velocidade de playback."
+            "A animação mostra a rodada selecionada na barra lateral. Use os controles laterais "
+            "para ajustar densidade de frames e velocidade de playback."
         )
         st.plotly_chart(
             build_animated_plot(active_run["result"], active_run["scenario_name"], stride, playback_ms),
@@ -703,12 +734,46 @@ def main() -> None:
 
     with comparison_tab:
         st.subheader("Comparação de rodadas")
-        st.markdown(build_runs_markdown_table(runs))
-        st.plotly_chart(build_runtime_comparison_chart(runs), use_container_width=True)
-        st.plotly_chart(build_series_comparison_chart(runs, "distance_series", "Comparação da distância entre os corpos", "||r2 - r1||"), use_container_width=True)
-        st.plotly_chart(build_series_comparison_chart(runs, "energy_series", "Comparação da energia total", "energia total"), use_container_width=True)
-        st.plotly_chart(build_series_comparison_chart(runs, "angular_momentum_norm", "Comparação do módulo do momento angular total", "||L||"), use_container_width=True)
-        st.plotly_chart(build_series_comparison_chart(runs, "linear_momentum_norm", "Comparação do módulo do momento linear total", "||P||"), use_container_width=True)
+        st.caption(
+            "Erro relativo de energia e erro relativo de momento angular medem o maior desvio relativo em relação ao valor inicial "
+            "da rodada. Em geral, quanto menor esse número, melhor a conservação numérica."
+        )
+
+        fastest_run = min(runs, key=lambda run: run["elapsed"])
+        lowest_energy_drift_run = min(runs, key=lambda run: run["energy_drift_max"])
+        lowest_angular_drift_run = min(runs, key=lambda run: run["angular_momentum_drift_max"])
+        summary_metrics = st.columns(4)
+        summary_metrics[0].metric("Rodadas comparadas", len(runs))
+        summary_metrics[1].metric("Mais rápida", fastest_run["label"], f"{fastest_run['elapsed']:.3f}s")
+        summary_metrics[2].metric("Menor erro rel. de energia", lowest_energy_drift_run["label"], f"{lowest_energy_drift_run['energy_drift_max']:.3e}")
+        summary_metrics[3].metric("Menor erro rel. de L", lowest_angular_drift_run["label"], f"{lowest_angular_drift_run['angular_momentum_drift_max']:.3e}")
+
+        with st.expander("Tabela resumida das rodadas", expanded=True):
+            st.dataframe(build_runs_table_rows(runs), use_container_width=True, hide_index=True)
+
+        overview_cols = st.columns(2)
+        overview_cols[0].plotly_chart(build_runtime_comparison_chart(runs), use_container_width=True)
+        overview_cols[1].plotly_chart(build_drift_summary_chart(runs), use_container_width=True)
+
+        state_cols = st.columns(2)
+        state_cols[0].plotly_chart(
+            build_series_comparison_chart(runs, "distance_series", "Comparação da distância entre os corpos", "||r2 - r1||"),
+            use_container_width=True,
+        )
+        state_cols[1].plotly_chart(
+            build_series_comparison_chart(runs, "energy_series", "Comparação da energia total", "energia total"),
+            use_container_width=True,
+        )
+
+        invariant_cols = st.columns(2)
+        invariant_cols[0].plotly_chart(
+            build_series_comparison_chart(runs, "angular_momentum_norm", "Comparação do módulo do momento angular total", "||L||"),
+            use_container_width=True,
+        )
+        invariant_cols[1].plotly_chart(
+            build_series_comparison_chart(runs, "linear_momentum_norm", "Comparação do módulo do momento linear total", "||P||"),
+            use_container_width=True,
+        )
 
     with details_tab:
         with st.expander("Configuração usada na rodada selecionada", expanded=True):

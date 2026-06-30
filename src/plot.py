@@ -1,6 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.lines import Line2D
 
@@ -52,14 +52,30 @@ def set_axes_equal_3d(ax, r1_sol, r2_sol, r_com_sol=None, fator_visual_z=0.75):
     ax.set_zlim(z_mid - lim * fator_visual_z, z_mid + lim * fator_visual_z)
 
 
-def render_simulation_artifacts(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism="newtonian"):
-    _render_static_plot(caso, r1_sol, r2_sol, r_com_sol, formalism)
+def render_simulation_artifacts(
+    caso,
+    time_span,
+    r1_sol,
+    r2_sol,
+    r_com_sol,
+    formalism="newtonian",
+    render_static=True,
+):
+    if render_static:
+        _render_static_plot(caso, r1_sol, r2_sol, r_com_sol, formalism)
 
     if not caso["chart"]["salvar_animacao"]:
         print("Exportação de animação desativada para este cenário.")
         return {"animacao": None, "video": None}
 
-    return _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism)
+    return _render_animation(
+        caso,
+        time_span,
+        r1_sol,
+        r2_sol,
+        r_com_sol,
+        formalism,
+    )
 
 
 def _format_param_value(value):
@@ -163,7 +179,14 @@ def _render_static_plot(caso, r1_sol, r2_sol, r_com_sol, formalism):
     plt.close(fig_static)
 
 
-def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism):
+def _render_animation(
+    caso,
+    time_span,
+    r1_sol,
+    r2_sol,
+    r_com_sol,
+    formalism,
+):
     writer_ffmpeg_disponivel = animation.writers.is_available("ffmpeg")
     skip_animacao = caso["chart"]["skip"]
     dpi_animacao = caso["chart"]["dpi"]
@@ -256,7 +279,14 @@ def _render_animation(caso, time_span, r1_sol, r2_sol, r_com_sol, formalism):
         blit=False,
     )
 
-    nome_video = _save_animation(caso, anim, writer_ffmpeg_disponivel, dpi_animacao, fig, formalism)
+    nome_video = _save_animation(
+        caso,
+        anim,
+        writer_ffmpeg_disponivel,
+        dpi_animacao,
+        fig,
+        formalism,
+    )
     plt.close(fig)
     return {"animacao": anim, "video": nome_video}
 
