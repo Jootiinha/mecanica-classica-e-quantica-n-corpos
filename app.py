@@ -89,6 +89,25 @@ def _axis_ranges(result: dict) -> dict[str, list[float]]:
     }
 
 
+def _axis_ranges_for_runs(runs: list[dict]) -> dict[str, list[float]]:
+    points = np.vstack(
+        [
+            np.vstack((run["result"]["r1"], run["result"]["r2"], run["result"]["r_com"]))
+            for run in runs
+        ]
+    )
+    mins = points.min(axis=0)
+    maxs = points.max(axis=0)
+    center = 0.5 * (mins + maxs)
+    spans = np.maximum(maxs - mins, 1.0)
+    radius = 0.6 * float(spans.max())
+    return {
+        "x": [float(center[0] - radius), float(center[0] + radius)],
+        "y": [float(center[1] - radius), float(center[1] + radius)],
+        "z": [float(center[2] - radius), float(center[2] + radius)],
+    }
+
+
 def _max_relative_drift(series: np.ndarray) -> float:
     reference = np.linalg.norm(series[0]) if series.ndim > 1 else abs(float(series[0]))
     variation = np.linalg.norm(series - series[0], axis=-1) if series.ndim > 1 else np.abs(series - series[0])
@@ -395,6 +414,83 @@ def build_runtime_comparison_chart(runs: list[dict]) -> go.Figure:
         yaxis2=dict(title="avaliações", overlaying="y", side="right"),
         xaxis=dict(title="rodada", tickangle=-20),
         legend=dict(orientation="h", yanchor="top", y=-0.22, xanchor="left", x=0.0),
+    )
+    return fig
+
+
+def build_trajectory_comparison_chart(runs: list[dict]) -> go.Figure:
+    fig = go.Figure()
+    axis_ranges = _axis_ranges_for_runs(runs)
+    palette = [
+        "#123c69",
+        "#d1495b",
+        "#2a9d8f",
+        "#6c584c",
+        "#8f5bd6",
+        "#ef476f",
+        "#118ab2",
+        "#f4a261",
+    ]
+
+    for index, run in enumerate(runs):
+        color = palette[index % len(palette)]
+        customdata = np.column_stack(
+            [
+                np.full(len(run["result"]["time"]), _run_chart_ref(run), dtype=object),
+                np.full(len(run["result"]["time"]), run["scenario_name"], dtype=object),
+                np.full(len(run["result"]["time"]), run["integration_method"], dtype=object),
+            ]
+        )
+        common_trace = dict(
+            mode="lines",
+            customdata=customdata,
+            hovertemplate=(
+                "Rodada: %{customdata[0]}<br>"
+                "Cenário: %{customdata[1]}<br>"
+                "Método: %{customdata[2]}<br>"
+                "x: %{x:.6g}<br>"
+                "y: %{y:.6g}<br>"
+                "z: %{z:.6g}<extra></extra>"
+            ),
+        )
+        fig.add_trace(
+            go.Scatter3d(
+                x=run["result"]["r1"][:, 0],
+                y=run["result"]["r1"][:, 1],
+                z=run["result"]["r1"][:, 2],
+                name=f"{_run_chart_name(run)} · corpo 1",
+                line=dict(color=color, width=6),
+                legendgroup=_run_chart_ref(run),
+                **common_trace,
+            )
+        )
+        fig.add_trace(
+            go.Scatter3d(
+                x=run["result"]["r2"][:, 0],
+                y=run["result"]["r2"][:, 1],
+                z=run["result"]["r2"][:, 2],
+                name=f"{_run_chart_name(run)} · corpo 2",
+                line=dict(color=color, width=4, dash="dash"),
+                legendgroup=_run_chart_ref(run),
+                **common_trace,
+            )
+        )
+
+    fig.update_layout(
+        title=dict(text="Trajetórias 3D sobrepostas", x=0.0, xanchor="left"),
+        height=720,
+        margin=dict(l=0, r=0, t=72, b=0),
+        legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0.0),
+        scene=dict(
+            xaxis_title="x",
+            yaxis_title="y",
+            zaxis_title="z",
+            xaxis=dict(range=axis_ranges["x"]),
+            yaxis=dict(range=axis_ranges["y"]),
+            zaxis=dict(range=axis_ranges["z"]),
+            aspectmode="cube",
+            camera=dict(eye=dict(x=1.55, y=1.4, z=0.9)),
+        ),
     )
     return fig
 
@@ -838,6 +934,11 @@ def main() -> None:
 
         with st.expander("Tabela resumida das rodadas", expanded=True):
             st.dataframe(build_runs_table_rows(filtered_runs), use_container_width=True, hide_index=True)
+
+        st.plotly_chart(build_trajectory_comparison_chart(filtered_runs), use_container_width=True)
+        st.caption(
+            "Para evidenciar a diferença entre integradores, filtre um único cenário e mantenha apenas os métodos desejados."
+        )
 
         overview_cols = st.columns(2)
         overview_cols[0].plotly_chart(build_runtime_comparison_chart(filtered_runs), use_container_width=True)
