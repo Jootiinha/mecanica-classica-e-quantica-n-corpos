@@ -16,6 +16,7 @@ from src.utils import build_formalism_output_dir, load_scenarios
 
 SCENARIOS_DIR = Path("scenarios")
 FORMALISM = "newtonian"
+FORMALISM_LABEL = "newtoniano"
 STREAMLIT_RUNS_DIR = build_formalism_output_dir(FORMALISM) / "streamlit_runs"
 STREAMLIT_RUNS_INDEX_PATH = STREAMLIT_RUNS_DIR / "index.json"
 
@@ -296,6 +297,14 @@ def build_runs_table_rows(runs: list[dict]) -> list[dict[str, str | int | float]
     return rows
 
 
+def _run_chart_ref(run: dict) -> str:
+    return f"R{run['id']:02d}"
+
+
+def _run_chart_name(run: dict) -> str:
+    return f"{_run_chart_ref(run)} · {run['integration_method']}"
+
+
 def build_series_comparison_chart(
     runs: list[dict],
     series_key: str,
@@ -304,65 +313,121 @@ def build_series_comparison_chart(
 ) -> go.Figure:
     fig = go.Figure()
     for run in runs:
+        customdata = np.column_stack(
+            [
+                np.full(len(run["result"]["time"]), _run_chart_ref(run), dtype=object),
+                np.full(len(run["result"]["time"]), run["scenario_name"], dtype=object),
+                np.full(len(run["result"]["time"]), run["integration_method"], dtype=object),
+            ]
+        )
         fig.add_trace(
             go.Scatter(
                 x=run["result"]["time"],
                 y=run["analysis"][series_key],
                 mode="lines",
-                name=run["label"],
+                name=_run_chart_name(run),
+                customdata=customdata,
+                hovertemplate=(
+                    "Rodada: %{customdata[0]}<br>"
+                    "Cenário: %{customdata[1]}<br>"
+                    "Método: %{customdata[2]}<br>"
+                    "tempo: %{x:.3f}<br>"
+                    "valor: %{y:.6g}<extra></extra>"
+                ),
             )
         )
 
     fig.update_layout(
-        title=title,
+        title=dict(text=title, x=0.0, xanchor="left"),
         xaxis_title="tempo",
         yaxis_title=yaxis_title,
         height=420,
-        margin=dict(l=0, r=0, t=56, b=0),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0.0),
+        margin=dict(l=0, r=0, t=72, b=96),
+        legend=dict(orientation="h", yanchor="top", y=-0.22, xanchor="left", x=0.0),
     )
     return fig
 
 
 def build_runtime_comparison_chart(runs: list[dict]) -> go.Figure:
-    labels = [run["label"] for run in runs]
+    labels = [_run_chart_ref(run) for run in runs]
     elapsed = [run["elapsed"] for run in runs]
     nfev = [run["nfev"] for run in runs]
+    scenario_names = [run["scenario_name"] for run in runs]
+    methods = [run["integration_method"] for run in runs]
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(name="Tempo de cálculo (s)", x=labels, y=elapsed))
-    fig.add_trace(go.Bar(name="Avaliações da EDO", x=labels, y=nfev, yaxis="y2"))
+    fig.add_trace(
+        go.Bar(
+            name="Tempo de cálculo (s)",
+            x=labels,
+            y=elapsed,
+            customdata=np.column_stack([scenario_names, methods]),
+            hovertemplate=(
+                "Rodada: %{x}<br>"
+                "Cenário: %{customdata[0]}<br>"
+                "Método: %{customdata[1]}<br>"
+                "tempo: %{y:.3f}s<extra></extra>"
+            ),
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            name="Avaliações da EDO",
+            x=labels,
+            y=nfev,
+            yaxis="y2",
+            customdata=np.column_stack([scenario_names, methods]),
+            hovertemplate=(
+                "Rodada: %{x}<br>"
+                "Cenário: %{customdata[0]}<br>"
+                "Método: %{customdata[1]}<br>"
+                "avaliações: %{y}<extra></extra>"
+            ),
+        )
+    )
 
     fig.update_layout(
-        title="Comparação de custo numérico",
+        title=dict(text="Comparação de custo numérico", x=0.0, xanchor="left"),
         height=420,
-        margin=dict(l=0, r=0, t=56, b=0),
+        margin=dict(l=0, r=0, t=72, b=96),
         barmode="group",
         yaxis=dict(title="tempo (s)"),
         yaxis2=dict(title="avaliações", overlaying="y", side="right"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0.0),
+        xaxis=dict(title="rodada", tickangle=-20),
+        legend=dict(orientation="h", yanchor="top", y=-0.22, xanchor="left", x=0.0),
     )
     return fig
 
 
 def build_drift_summary_chart(runs: list[dict]) -> go.Figure:
-    labels = [run["label"] for run in runs]
+    labels = [_run_chart_ref(run) for run in runs]
     energy = [run["energy_drift_max"] for run in runs]
     angular = [run["angular_momentum_drift_max"] for run in runs]
     linear = [run["linear_momentum_drift_max"] for run in runs]
+    scenario_names = [run["scenario_name"] for run in runs]
+    methods = [run["integration_method"] for run in runs]
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(name="Energia", x=labels, y=energy))
-    fig.add_trace(go.Bar(name="Momento angular", x=labels, y=angular))
-    fig.add_trace(go.Bar(name="Momento linear", x=labels, y=linear))
+    fig.add_trace(go.Bar(name="Energia", x=labels, y=energy, customdata=np.column_stack([scenario_names, methods])))
+    fig.add_trace(go.Bar(name="Momento angular", x=labels, y=angular, customdata=np.column_stack([scenario_names, methods])))
+    fig.add_trace(go.Bar(name="Momento linear", x=labels, y=linear, customdata=np.column_stack([scenario_names, methods])))
 
     fig.update_layout(
-        title="Resumo de erro relativo máximo",
+        title=dict(text="Resumo de erro relativo máximo", x=0.0, xanchor="left"),
         height=420,
-        margin=dict(l=0, r=0, t=56, b=0),
+        margin=dict(l=0, r=0, t=72, b=96),
         barmode="group",
         yaxis=dict(title="erro relativo máximo"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0.0),
+        xaxis=dict(title="rodada", tickangle=-20),
+        legend=dict(orientation="h", yanchor="top", y=-0.22, xanchor="left", x=0.0),
+    )
+    fig.update_traces(
+        hovertemplate=(
+            "Rodada: %{x}<br>"
+            "Cenário: %{customdata[0]}<br>"
+            "Método: %{customdata[1]}<br>"
+            "valor: %{y:.6g}<extra></extra>"
+        )
     )
     return fig
 
@@ -431,7 +496,7 @@ def build_animated_plot(
 
     fig.update_layout(
         title=dict(
-            text=f"{scenario_name} [{FORMALISM} | {integration_method}]",
+            text=f"{scenario_name} [{FORMALISM_LABEL} | {integration_method}]",
             x=0.0,
             xanchor="left",
             y=0.98,
@@ -570,7 +635,7 @@ def main() -> None:
     st.sidebar.header("Visualização")
     preview_points = st.sidebar.slider("Máximo de frames na animação", 60, 300, 180, step=20)
     playback_ms = st.sidebar.slider("Velocidade da animação (ms/frame)", 25, 250, 60, step=5)
-    st.sidebar.caption(f"Formalismo fixo: {FORMALISM}")
+    st.sidebar.caption(f"Formalismo fixo: {FORMALISM_LABEL}")
 
     st.subheader("Configuração da simulação")
     st.caption("Os campos foram agrupados por responsabilidade para separar solver, parâmetros físicos e estado inicial.")
@@ -739,39 +804,62 @@ def main() -> None:
             "da rodada. Em geral, quanto menor esse número, melhor a conservação numérica."
         )
 
-        fastest_run = min(runs, key=lambda run: run["elapsed"])
-        lowest_energy_drift_run = min(runs, key=lambda run: run["energy_drift_max"])
-        lowest_angular_drift_run = min(runs, key=lambda run: run["angular_momentum_drift_max"])
+        available_scenarios = sorted({run["scenario_name"] for run in runs})
+        available_methods = sorted({run["integration_method"] for run in runs})
+        filter_cols = st.columns([1.6, 1.0])
+        selected_scenarios = filter_cols[0].multiselect(
+            "Cenários incluídos",
+            options=available_scenarios,
+            default=available_scenarios,
+        )
+        selected_methods = filter_cols[1].multiselect(
+            "Métodos incluídos",
+            options=available_methods,
+            default=available_methods,
+        )
+
+        filtered_runs = [
+            run
+            for run in runs
+            if run["scenario_name"] in selected_scenarios and run["integration_method"] in selected_methods
+        ]
+        if not filtered_runs:
+            st.info("Nenhuma rodada corresponde aos filtros selecionados.")
+            return
+
+        fastest_run = min(filtered_runs, key=lambda run: run["elapsed"])
+        lowest_energy_drift_run = min(filtered_runs, key=lambda run: run["energy_drift_max"])
+        lowest_angular_drift_run = min(filtered_runs, key=lambda run: run["angular_momentum_drift_max"])
         summary_metrics = st.columns(4)
-        summary_metrics[0].metric("Rodadas comparadas", len(runs))
-        summary_metrics[1].metric("Mais rápida", fastest_run["label"], f"{fastest_run['elapsed']:.3f}s")
-        summary_metrics[2].metric("Menor erro rel. de energia", lowest_energy_drift_run["label"], f"{lowest_energy_drift_run['energy_drift_max']:.3e}")
-        summary_metrics[3].metric("Menor erro rel. de L", lowest_angular_drift_run["label"], f"{lowest_angular_drift_run['angular_momentum_drift_max']:.3e}")
+        summary_metrics[0].metric("Rodadas comparadas", len(filtered_runs))
+        summary_metrics[1].metric("Mais rápida", _run_chart_name(fastest_run), f"{fastest_run['elapsed']:.3f}s")
+        summary_metrics[2].metric("Menor erro rel. de energia", _run_chart_name(lowest_energy_drift_run), f"{lowest_energy_drift_run['energy_drift_max']:.3e}")
+        summary_metrics[3].metric("Menor erro rel. de L", _run_chart_name(lowest_angular_drift_run), f"{lowest_angular_drift_run['angular_momentum_drift_max']:.3e}")
 
         with st.expander("Tabela resumida das rodadas", expanded=True):
-            st.dataframe(build_runs_table_rows(runs), use_container_width=True, hide_index=True)
+            st.dataframe(build_runs_table_rows(filtered_runs), use_container_width=True, hide_index=True)
 
         overview_cols = st.columns(2)
-        overview_cols[0].plotly_chart(build_runtime_comparison_chart(runs), use_container_width=True)
-        overview_cols[1].plotly_chart(build_drift_summary_chart(runs), use_container_width=True)
+        overview_cols[0].plotly_chart(build_runtime_comparison_chart(filtered_runs), use_container_width=True)
+        overview_cols[1].plotly_chart(build_drift_summary_chart(filtered_runs), use_container_width=True)
 
         state_cols = st.columns(2)
         state_cols[0].plotly_chart(
-            build_series_comparison_chart(runs, "distance_series", "Comparação da distância entre os corpos", "||r2 - r1||"),
+            build_series_comparison_chart(filtered_runs, "distance_series", "Comparação da distância entre os corpos", "||r2 - r1||"),
             use_container_width=True,
         )
         state_cols[1].plotly_chart(
-            build_series_comparison_chart(runs, "energy_series", "Comparação da energia total", "energia total"),
+            build_series_comparison_chart(filtered_runs, "energy_series", "Comparação da energia total", "energia total"),
             use_container_width=True,
         )
 
         invariant_cols = st.columns(2)
         invariant_cols[0].plotly_chart(
-            build_series_comparison_chart(runs, "angular_momentum_norm", "Comparação do módulo do momento angular total", "||L||"),
+            build_series_comparison_chart(filtered_runs, "angular_momentum_norm", "Comparação do módulo do momento angular total", "||L||"),
             use_container_width=True,
         )
         invariant_cols[1].plotly_chart(
-            build_series_comparison_chart(runs, "linear_momentum_norm", "Comparação do módulo do momento linear total", "||P||"),
+            build_series_comparison_chart(filtered_runs, "linear_momentum_norm", "Comparação do módulo do momento linear total", "||P||"),
             use_container_width=True,
         )
 
