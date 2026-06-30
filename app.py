@@ -89,7 +89,11 @@ def build_animated_plot(
             z=[r1[index, 2], r2[index, 2], r_com[index, 2]],
             mode="markers",
             name="Posição atual",
-            marker=dict(size=[8, 8, 6], color=["#123c69", "#d1495b", "#2f2f2f"]),
+            marker=dict(
+                size=[8, 8, 6],
+                color=["#123c69", "#d1495b", "#ffffff"],
+                line=dict(color="#111111", width=1),
+            ),
         )
 
     fig = go.Figure(
@@ -116,7 +120,7 @@ def build_animated_plot(
                 z=r_com[:1, 2],
                 mode="lines",
                 name="Centro de massa",
-                line=dict(color="#2f2f2f", width=4, dash="dash"),
+                line=dict(color="#ffffff", width=4, dash="dash"),
             ),
             marker_trace(0),
         ],
@@ -143,7 +147,7 @@ def build_animated_plot(
                         y=r_com[: index + 1, 1],
                         z=r_com[: index + 1, 2],
                         mode="lines",
-                        line=dict(color="#2f2f2f", width=4, dash="dash"),
+                        line=dict(color="#ffffff", width=4, dash="dash"),
                     ),
                     marker_trace(index),
                 ],
