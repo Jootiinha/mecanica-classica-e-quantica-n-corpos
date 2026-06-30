@@ -82,12 +82,7 @@ def _build_plot_title(caso, formalism):
     if scenario_name.endswith(suffix):
         scenario_name = scenario_name[: -len(suffix)]
 
-    formalism_label = {
-        "newtonian": "Newtoniano",
-        "lagrangian": "Lagrangiano",
-        "hamiltonian": "Hamiltoniano",
-    }.get(formalism, formalism.capitalize())
-    return f"Simulacao gravitacional 3D\n{scenario_name} | Formalismo: {formalism_label}"
+    return f"Simulacao gravitacional 3D\n{scenario_name} | Formalismo: Newtoniano"
 
 
 def _build_parameter_labels(caso):

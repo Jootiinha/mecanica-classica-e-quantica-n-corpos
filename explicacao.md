@@ -2,19 +2,15 @@
 
 ## Visão geral
 
-O projeto resolve numericamente o problema gravitacional de dois corpos e organiza a execução em três formalismos:
+O projeto resolve numericamente o problema gravitacional de dois corpos no formalismo `newtonian`.
 
-- `newtonian`
-- `lagrangian`
-- `hamiltonian`
-
-A ideia central é sempre a mesma: dado um conjunto de condições iniciais, o programa integra o sistema no tempo e salva:
+Dado um conjunto de condições iniciais, o programa integra o sistema no tempo e salva:
 
 - trajetória dos corpos;
-- velocidades ou momentos;
+- velocidades;
 - centro de massa;
 - métricas de performance;
-- relatórios de conservação e comparação.
+- relatório de conservação.
 
 ## 1. Problema físico
 
@@ -111,67 +107,7 @@ No código:
 
 - [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:36): `equacao_newton_dois_corpos(...)`
 
-## 4. Formalismo lagrangiano
-
-No problema de dois corpos em coordenadas cartesianas, as equações de Euler-Lagrange levam à mesma dinâmica física do caso newtoniano quando o sistema é escrito como EDO de primeira ordem.
-
-A Lagrangiana é:
-
-```text
-L = T - U
-```
-
-onde:
-
-```text
-T = 1/2 m1 |v1|^2 + 1/2 m2 |v2|^2
-U = - G m1 m2 / r
-```
-
-Por isso, neste projeto, o solver lagrangiano reaproveita a mesma dinâmica numérica do solver newtoniano.
-
-No código:
-
-- [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:59): `equacao_lagrange_dois_corpos(...)`
-
-### Como explicar isso na apresentação
-
-Você pode dizer:
-
-- o formalismo lagrangiano foi usado no nível conceitual;
-- para integração numérica, a dinâmica foi convertida ao mesmo sistema de primeira ordem;
-- por isso as trajetórias coincidem com o formalismo newtoniano.
-
-## 5. Formalismo hamiltoniano
-
-No formalismo hamiltoniano, o estado do sistema muda para:
-
-```text
-w = [r1, r2, p1, p2]
-```
-
-em que:
-
-```text
-p1 = m1 v1
-p2 = m2 v2
-```
-
-As equações de Hamilton ficam:
-
-```text
-dr1/dt = p1 / m1
-dr2/dt = p2 / m2
-dp1/dt = F1
-dp2/dt = F2
-```
-
-No código:
-
-- [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:74): `equacao_hamilton_dois_corpos(...)`
-- [src/simulacao.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/simulacao.py:34): montagem do estado inicial com momentos
-
-## 6. Massa variável
+## 4. Massa variável
 
 O trabalho também pede um caso com massa dependente do tempo.
 
@@ -191,20 +127,12 @@ Se `massa_variavel` for `false`, a massa fica constante:
 m(t) = m0
 ```
 
-## 7. Construção do estado inicial
+## 5. Construção do estado inicial
 
-O código lê o cenário YAML e monta o vetor inicial.
-
-Para Newton e Lagrange:
+O código lê o cenário YAML e monta o vetor inicial:
 
 ```text
 [r1(0), r2(0), v1(0), v2(0)]
-```
-
-Para Hamilton:
-
-```text
-[r1(0), r2(0), p1(0), p2(0)]
 ```
 
 Além disso, a velocidade do centro de massa é somada às velocidades iniciais:
@@ -218,7 +146,7 @@ No código:
 
 - [src/simulacao.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/simulacao.py:22): `_build_initial_state(...)`
 
-## 8. Integração numérica
+## 6. Integração numérica
 
 Depois de montar o estado inicial, o programa cria a malha temporal:
 
@@ -238,7 +166,7 @@ No código:
 - `n_pontos`: quantidade de amostras salvas
 - `rtol` e `atol`: tolerâncias numéricas
 
-## 9. Centro de massa
+## 7. Centro de massa
 
 O centro de massa é calculado por:
 
@@ -251,7 +179,7 @@ No código:
 - [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:4): fórmula auxiliar
 - [src/simulacao.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/simulacao.py:106): cálculo da série temporal `r_com`
 
-## 10. Grandezas conservadas
+## 8. Grandezas conservadas
 
 O projeto calcula três grandezas para avaliar a conservação numérica.
 
@@ -271,7 +199,6 @@ U = - G m1 m2 / r
 No código:
 
 - [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:118): `energial_total(...)`
-- [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:105): `hamiltoniano_total(...)`
 
 ### Momento linear total
 
@@ -293,47 +220,27 @@ No código:
 
 - [src/calculos.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/calculos.py:136): `momento_angular_total(...)`
 
-## 11. Comparação entre formalismos
-
-Depois de rodar os três formalismos, o projeto compara as trajetórias usando o formalismo newtoniano como referência.
-
-As métricas atuais são:
-
-```text
-max |r1_formalismo - r1_newtonian|
-max |r2_formalismo - r2_newtonian|
-```
-
-No código:
-
-- [src/trabalho_analysis.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/trabalho_analysis.py:69): `compare_formalisms(...)`
-
-### Interpretação
-
-Se essas diferenças forem muito pequenas, isso indica que os três formalismos estão descrevendo a mesma dinâmica física no experimento numérico.
-
-## 12. Organização da execução
+## 9. Organização da execução
 
 O fluxo principal é:
 
 1. `main.py` lê um cenário YAML.
-2. Roda os três formalismos.
-3. Salva um `.npz` por formalismo.
-4. Salva um CSV de performance por formalismo.
-5. Salva um relatório individual por formalismo.
-6. Salva um relatório comparativo entre os formalismos.
+2. Roda o solver newtoniano.
+3. Salva um `.npz` com as séries temporais.
+4. Salva um CSV de performance do fluxo newtoniano.
+5. Salva um relatório com as métricas de conservação.
 
 No código:
 
 - [main.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/main.py:17)
 
-## 13. Renderização
+## 10. Renderização
 
 A renderização não faz parte do benchmark principal.
 
 O fluxo é:
 
-1. `render_results.py` escolhe um formalismo.
+1. `render_results.py` valida o uso do formalismo newtoniano.
 2. Lê o `.npz` correspondente.
 3. Chama `src.plot`.
 4. Gera gráfico estático e animação.
@@ -343,16 +250,14 @@ No código:
 - [render_results.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/render_results.py:1)
 - [src/plot.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/plot.py:54)
 
-## 14. Benchmark
+## 11. Benchmark
 
-Cada formalismo gera seu próprio CSV de performance com:
+O fluxo newtoniano gera um CSV de performance com:
 
 - tempo total;
 - tempo de CPU;
 - CPU média;
 - pico de memória.
-
-Isso permite comparar custo computacional entre Newton, Lagrange e Hamilton.
 
 Arquivos principais:
 
@@ -360,21 +265,20 @@ Arquivos principais:
 - [src/prepare_execution_chart_data.py](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/src/prepare_execution_chart_data.py:1)
 - [execution_metrics.gnuplot](/Users/joaocrm/Documents/dev/mestrado/mecanica-classica-e-quantica-n-corpos/execution_metrics.gnuplot:1)
 
-## 15. Como apresentar
+## 12. Como apresentar
 
 Uma sequência boa para a apresentação é:
 
 1. explicar o problema físico de dois corpos;
 2. mostrar a força gravitacional e a suavização `eps`;
 3. mostrar como o estado inicial é montado;
-4. explicar os três formalismos;
-5. mostrar que o solver integra os três separadamente;
+4. explicar o formalismo newtoniano implementado;
+5. mostrar como o solver integra o sistema;
 6. apresentar conservação de energia, momento linear e momento angular;
-7. mostrar a comparação entre trajetórias;
-8. fechar com benchmark e animações.
+7. fechar com benchmark e animações.
 
-## 16. Mensagem curta para usar na fala
+## 13. Mensagem curta para usar na fala
 
 Você pode resumir assim:
 
-> O projeto resolve o problema gravitacional de dois corpos por integração numérica. A mesma física foi organizada em três formalismos, Newton, Lagrange e Hamilton, e depois comparada numericamente por trajetória, conservação e custo computacional. A renderização foi separada do benchmark para que o tempo medido represente o solver, e não o custo do Matplotlib.
+> O projeto resolve o problema gravitacional de dois corpos por integração numérica no formalismo newtoniano. O solver integra as trajetórias, calcula grandezas de conservação e separa a renderização do benchmark para que o tempo medido represente a simulação, e não o custo do Matplotlib.

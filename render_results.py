@@ -3,17 +3,15 @@ import os
 import numpy as np
 
 from src.plot import render_simulation_artifacts
-from src.simulacao import FORMALISMS
 from src.utils import build_results_file_path_for_formalism, load_scenarios
 
 PATH_SCENARIOS = "./scenarios/"
-
+FORMALISM = "newtonian"
 
 def _resolve_formalism() -> str:
-    requested_formalism = (os.environ.get("FORMALISM") or "newtonian").strip().lower()
-    if requested_formalism not in FORMALISMS:
-        valid = ", ".join(FORMALISMS)
-        raise ValueError(f"FORMALISM invalido: {requested_formalism}. Use um de: {valid}")
+    requested_formalism = (os.environ.get("FORMALISM") or FORMALISM).strip().lower()
+    if requested_formalism != FORMALISM:
+        raise ValueError(f"FORMALISM invalido: {requested_formalism}. Use apenas: {FORMALISM}")
     return requested_formalism
 
 

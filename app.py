@@ -9,10 +9,11 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.simulacao import FORMALISMS, simular_dois_corpos_3d
+from src.simulacao import simular_dois_corpos_3d
 from src.utils import load_scenarios
 
 SCENARIOS_DIR = Path("scenarios")
+FORMALISM = "newtonian"
 
 
 @st.cache_data(show_spinner=False)
@@ -26,10 +27,10 @@ def load_scenario_config(scenario_name: str) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def run_simulation_cached(config_json: str, formalism: str) -> tuple[dict, float]:
+def run_simulation_cached(config_json: str) -> tuple[dict, float]:
     scenario_config = json.loads(config_json)
     start = time.perf_counter()
-    result = simular_dois_corpos_3d(scenario_config, formalism=formalism)
+    result = simular_dois_corpos_3d(scenario_config, formalism=FORMALISM)
     elapsed = time.perf_counter() - start
     return result, elapsed
 
@@ -71,7 +72,6 @@ def _axis_ranges(result: dict) -> dict[str, list[float]]:
 def build_animated_plot(
     result: dict,
     scenario_name: str,
-    formalism: str,
     stride: int,
     playback_ms: int,
 ) -> go.Figure:
@@ -170,7 +170,7 @@ def build_animated_plot(
     )
 
     fig.update_layout(
-        title=f"{scenario_name} [{formalism}]",
+        title=f"{scenario_name} [newtonian]",
         height=820,
         margin=dict(l=0, r=0, t=56, b=0),
         legend=dict(
@@ -284,9 +284,9 @@ def main() -> None:
     default_config = copy.deepcopy(load_scenario_config(selected_scenario))
     physics = default_config["physics"]
 
-    formalism = st.sidebar.selectbox("Formalismo", FORMALISMS, index=0)
     preview_points = st.sidebar.slider("Máximo de frames na animação", 60, 300, 180, step=20)
     playback_ms = st.sidebar.slider("Velocidade da animação (ms/frame)", 25, 250, 60, step=5)
+    st.sidebar.caption("Solver fixo: newtoniano")
 
     st.sidebar.header("Parâmetros físicos")
     physics["gravity"] = st.sidebar.number_input(
@@ -382,7 +382,7 @@ def main() -> None:
 
     try:
         with st.spinner("Recalculando a simulação..."):
-            result, elapsed = run_simulation_cached(config_json, formalism)
+            result, elapsed = run_simulation_cached(config_json)
     except Exception as exc:
         st.error(f"Falha ao executar a simulação: {exc}")
         return
@@ -395,7 +395,7 @@ def main() -> None:
     metrics[0].metric("Tempo de cálculo", f"{elapsed:.3f}s")
     metrics[1].metric("Pontos integrados", total_points)
     metrics[2].metric("Frames exibidos", animated_points)
-    metrics[3].metric("Formalismo", formalism)
+    metrics[3].metric("Formalismo", FORMALISM)
 
     st.caption(
         "A interface recalcula automaticamente a dinâmica após cada ajuste e reduz a densidade "
@@ -405,7 +405,6 @@ def main() -> None:
         build_animated_plot(
             result,
             default_config["name"],
-            formalism,
             stride,
             playback_ms,
         ),
