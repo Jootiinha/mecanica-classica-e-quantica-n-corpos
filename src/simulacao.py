@@ -7,11 +7,19 @@ from src.calculos import (
 )
 
 FORMALISMS = ("newtonian",)
+INTEGRATION_METHODS = ("DOP853", "RK45", "RK23", "Radau", "BDF", "LSODA")
 
 def _validate_formalism(formalism: str) -> str:
     if formalism not in FORMALISMS:
         raise ValueError(f"Formalismo inválido: {formalism}")
     return formalism
+
+
+def _validate_integration_method(method: str) -> str:
+    normalized_method = method.strip()
+    if normalized_method not in INTEGRATION_METHODS:
+        raise ValueError(f"Metodo de integracao invalido: {method}")
+    return normalized_method
 
 
 def _build_initial_state(caso, formalism):
@@ -47,8 +55,15 @@ def _extract_solution_arrays(solucao, m1_series, m2_series, formalism):
     return r1_sol, r2_sol, v1_sol, v2_sol, p1_sol, p2_sol
 
 
-def simular_dois_corpos_3d(caso, formalism="newtonian"):
+def simular_dois_corpos_3d(
+    caso,
+    formalism="newtonian",
+    integration_method="DOP853",
+    rtol=1e-10,
+    atol=1e-10,
+):
     formalism = _validate_formalism(formalism)
+    integration_method = _validate_integration_method(integration_method)
 
     if caso['physics']['massa_variavel'] is True:
         if caso['physics']['tau1'] is None or caso['physics']['tau2'] is None:
@@ -72,9 +87,9 @@ def simular_dois_corpos_3d(caso, formalism="newtonian"):
             ,   caso['physics']['tau1']
             ,   caso['physics']['tau2']
         ),
-        method='DOP853',
-        rtol=1e-10,
-        atol=1e-10
+        method=integration_method,
+        rtol=rtol,
+        atol=atol
     )
 
     if not solver_object.success:
@@ -107,4 +122,8 @@ def simular_dois_corpos_3d(caso, formalism="newtonian"):
         "m1_t": m1_series,
         "m2_t": m2_series,
         "formalism": np.array(formalism),
+        "integration_method": np.array(integration_method),
+        "rtol": np.array(float(rtol)),
+        "atol": np.array(float(atol)),
+        "nfev": np.array(int(solver_object.nfev)),
     }

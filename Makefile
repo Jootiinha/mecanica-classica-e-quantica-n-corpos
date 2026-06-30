@@ -1,6 +1,10 @@
-.PHONY: clean run render render-all install help execution_chart web
+.DEFAULT_GOAL := help
+
+.PHONY: clean run run-adhoc render render-all install help execution_chart web
 
 FORMALISM ?= newtonian
+WEB_HOST ?= 127.0.0.1
+WEB_PORT ?= 8501
 
 help:
 	@echo "Comandos disponíveis:"
@@ -10,7 +14,8 @@ help:
 	@echo "  make render SCENARIO=arquivo.yaml FORMALISM=newtonian - Gera graficos e animacao do formalismo newtoniano"
 	@echo "  make render-all - Renderiza todos os cenarios com resultados .npz do formalismo newtoniano"
 	@echo "  make execution_chart FORMALISM=newtonian - Gera um grafico PNG do historico do formalismo"
-	@echo "  make web      - Inicia o prototipo Streamlit para explorar parametros interativamente"
+	@echo "  make web      - Inicia a aplicacao Streamlit em http://$(WEB_HOST):$(WEB_PORT)"
+	@echo "                 Exemplo: make web WEB_PORT=8502"
 	@echo "  make clean    - Remove arquivos __pycache__ e .pyc"
 	@echo "  make help     - Mostra esta mensagem"
 
@@ -58,7 +63,8 @@ execution_chart:
 	@echo "Grafico gerado em outputs/formalisms/$(FORMALISM)/charts/execution_metrics.png"
 
 web:
-	poetry run streamlit run app.py
+	@echo "Iniciando aplicacao em http://$(WEB_HOST):$(WEB_PORT)"
+	poetry run streamlit run app.py --server.address "$(WEB_HOST)" --server.port "$(WEB_PORT)"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
